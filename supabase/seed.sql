@@ -1,0 +1,17 @@
+-- =============================================================================
+-- MieterPlus — Seed-Daten (nur lokale Entwicklung)
+-- =============================================================================
+-- Lege drei Test-User per supabase admin api an (außerhalb dieser Datei),
+-- danach werden hier Beispiel-Properties und Codes erzeugt.
+--
+-- Test-User per CLI erstellen:
+--   supabase auth admin create-user --email landlord@test.de --password "TestPass123!" \
+--     --user-metadata '{"role":"landlord","full_name":"Lisa Vermieter"}'
+--   supabase auth admin create-user --email tenant@test.de --password "TestPass123!" \
+--     --user-metadata '{"role":"tenant","full_name":"Tom Mieter"}'
+--   supabase auth admin create-user --email admin@test.de --password "TestPass123!" \
+--     --user-metadata '{"role":"admin","full_name":"Anna Admin"}'
+-- =============================================================================
+
+-- (Seed bleibt absichtlich minimal — echte Test-User werden via Auth API
+--  angelegt, dann triggert der on_auth_user_created automatisch das Profil.)
