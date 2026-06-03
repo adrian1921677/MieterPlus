@@ -30,25 +30,34 @@ export function SignupForm({ initialRole }: { initialRole: 'tenant' | 'landlord'
 
   const onSubmit = async (values: SignUpInput) => {
     setServerError(null);
-    const supabase = createSupabaseBrowserClient();
-    const { data, error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { full_name: values.full_name, role: values.role },
-      },
-    });
-    if (error) {
-      setServerError(error.message);
-      return;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: { full_name: values.full_name, role: values.role },
+        },
+      });
+      if (error) {
+        setServerError(error.message);
+        return;
+      }
+      if (data.user && !data.session) {
+        setConfirmationSent(true);
+        return;
+      }
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err) {
+      // Vorher: throw verschwand im React-Hook-Form-Handler → "nichts passiert".
+      // Jetzt: Fehler wird sichtbar angezeigt.
+      const msg =
+        err instanceof Error ? err.message : 'Unbekannter Fehler bei der Registrierung.';
+      setServerError(`${msg} — Falls dieser Fehler bleibt, ist das Backend (Supabase) nicht erreichbar.`);
+      console.error('[signup]', err);
     }
-    if (data.user && !data.session) {
-      setConfirmationSent(true);
-      return;
-    }
-    router.push('/dashboard');
-    router.refresh();
   };
 
   if (confirmationSent) {

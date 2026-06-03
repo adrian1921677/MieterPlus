@@ -7,7 +7,9 @@ export function createSupabaseBrowserClient() {
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anon) {
     throw new Error(
-      'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY fehlen — siehe .env.example',
+      'Backend nicht konfiguriert: Die Supabase-Umgebungsvariablen ' +
+        '(NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY) ' +
+        'sind im Hosting-Setup nicht gesetzt.',
     );
   }
   return createBrowserClient(url, anon);

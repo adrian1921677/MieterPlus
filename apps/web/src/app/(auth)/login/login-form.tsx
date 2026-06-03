@@ -24,18 +24,27 @@ export function LoginForm() {
 
   const onSubmit = async (values: SignInInput) => {
     setServerError(null);
-    const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithPassword(values);
-    if (error) {
-      setServerError(
-        error.message === 'Invalid login credentials'
-          ? 'E-Mail oder Passwort ist falsch.'
-          : error.message,
-      );
-      return;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithPassword(values);
+      if (error) {
+        setServerError(
+          error.message === 'Invalid login credentials'
+            ? 'E-Mail oder Passwort ist falsch.'
+            : error.message,
+        );
+        return;
+      }
+      router.push(redirectTo);
+      router.refresh();
+    } catch (err) {
+      // Vorher: throw verschwand im React-Hook-Form-Handler → "nichts passiert".
+      // Jetzt: Fehler wird sichtbar angezeigt.
+      const msg =
+        err instanceof Error ? err.message : 'Unbekannter Fehler bei der Anmeldung.';
+      setServerError(`${msg} — Falls dieser Fehler bleibt, ist das Backend (Supabase) nicht erreichbar.`);
+      console.error('[login]', err);
     }
-    router.push(redirectTo);
-    router.refresh();
   };
 
   return (
