@@ -33,7 +33,16 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith('/login') || path.startsWith('/signup');
-  const isPublic = path === '/' || isAuthRoute || path.startsWith('/_next') || path.startsWith('/api/health');
+  // /auth/* (OAuth-Callback) MUSS public sein — der User ist beim Callback
+  // noch nicht eingeloggt, die Session entsteht erst durch den Token-Exchange
+  // in /auth/callback. Ohne diese Ausnahme würde die Middleware den User
+  // auf /login schicken, bevor der Code überhaupt eingelöst werden kann.
+  const isPublic =
+    path === '/' ||
+    isAuthRoute ||
+    path.startsWith('/_next') ||
+    path.startsWith('/api/health') ||
+    path.startsWith('/auth/');
 
   if (!user && !isPublic) {
     const loginUrl = new URL('/login', request.url);
