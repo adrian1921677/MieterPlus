@@ -12,43 +12,81 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { AddressAutocomplete, type AddressSelection } from '@/components/address-autocomplete';
+import { MAPBOX_ENABLED, staticMapUrl } from '@/lib/mapbox';
 
 export function NewPropertyForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [coords, setCoords] = useState<{ lng: number; lat: number } | null>(null);
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreatePropertyInput>({
     resolver: zodResolver(createPropertyInputSchema),
     defaultValues: { country: 'DE' },
   });
 
+  const onAddressPicked = (sel: AddressSelection) => {
+    if (sel.street) setValue('street', sel.street, { shouldValidate: true });
+    if (sel.house_number) setValue('house_number', sel.house_number, { shouldValidate: true });
+    if (sel.postal_code) setValue('postal_code', sel.postal_code, { shouldValidate: true });
+    if (sel.city) setValue('city', sel.city, { shouldValidate: true });
+    if (sel.country_code) setValue('country', sel.country_code, { shouldValidate: true });
+    setCoords({ lng: sel.longitude, lat: sel.latitude });
+  };
+
   const onSubmit = async (values: CreatePropertyInput) => {
     setServerError(null);
-    const supabase = createSupabaseBrowserClient();
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      setServerError('Bitte erneut anmelden.');
-      return;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        setServerError('Bitte erneut anmelden.');
+        return;
+      }
+      const { data, error } = await supabase
+        .from('properties')
+        .insert({ ...values, owner_id: userData.user.id })
+        .select('id')
+        .single();
+      if (error) {
+        setServerError(error.message);
+        return;
+      }
+      router.push(`/dashboard/properties/${data.id}?just_created=1`);
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unbekannter Fehler.';
+      setServerError(msg);
+      console.error('[new-property]', err);
     }
-    const { data, error } = await supabase
-      .from('properties')
-      .insert({ ...values, owner_id: userData.user.id })
-      .select('id')
-      .single();
-    if (error) {
-      setServerError(error.message);
-      return;
-    }
-    router.push(`/dashboard/properties/${data.id}?just_created=1`);
-    router.refresh();
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {MAPBOX_ENABLED && (
+        <AddressAutocomplete
+          onSelect={onAddressPicked}
+          label="Adresse suchen"
+          placeholder="z. B. Friedrich-Ebert-Str. 12, Wuppertal"
+        />
+      )}
+
+      {coords && (
+        <div className="overflow-hidden rounded-md border border-zinc-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={staticMapUrl({ longitude: coords.lng, latitude: coords.lat, width: 700, height: 240, zoom: 16 })}
+            alt="Karten-Vorschau der gewählten Adresse"
+            className="block h-auto w-full"
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 space-y-2">
           <Label htmlFor="street">Straße</Label>

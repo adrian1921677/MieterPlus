@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { PropertyMap } from '@/components/property-map';
 
 export const metadata = { title: 'Übersicht' };
 
@@ -96,21 +97,35 @@ export default async function DashboardPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 {verifiedTenancies.map((t) => {
                   const unit = Array.isArray(t.unit) ? t.unit[0] : t.unit;
                   const prop = unit ? (Array.isArray(unit.property) ? unit.property[0] : unit.property) : null;
                   return (
                     <div
                       key={t.id}
-                      className="flex flex-col gap-1 rounded-md border border-zinc-200 bg-white p-4"
+                      className="overflow-hidden rounded-md border border-zinc-200 bg-white"
                     >
-                      <div className="font-medium">
-                        {prop ? `${prop.street} ${prop.house_number}` : 'Unbekannte Adresse'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {prop ? `${prop.postal_code} ${prop.city}` : ''}
-                        {unit?.unit_label ? ` · ${unit.unit_label}` : ''}
+                      {prop && (
+                        <PropertyMap
+                          street={prop.street}
+                          house_number={prop.house_number}
+                          postal_code={prop.postal_code}
+                          city={prop.city}
+                          width={700}
+                          height={180}
+                          zoom={15}
+                          className="!rounded-none border-0 border-b border-zinc-200"
+                        />
+                      )}
+                      <div className="p-4">
+                        <div className="font-medium">
+                          {prop ? `${prop.street} ${prop.house_number}` : 'Unbekannte Adresse'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {prop ? `${prop.postal_code} ${prop.city}` : ''}
+                          {unit?.unit_label ? ` · ${unit.unit_label}` : ''}
+                        </div>
                       </div>
                     </div>
                   );
