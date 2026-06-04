@@ -25,15 +25,17 @@ export default async function DashboardPage() {
   if (!profile) redirect('/login');
 
   if (profile.role === 'tenant') {
-    // Tenancies des Mieters laden (inkl. Wohnung + Adresse via unit → property)
+    // Aktive Tenancies des Mieters laden (inkl. Wohnung + Adresse via unit → property)
+    // "aktiv" = ended_at IS NULL (kein verified_at-Feld in der DB)
     const { data: tenancies } = await supabase
       .from('tenancies')
       .select(
-        'id, verified_at, unit:units(id, unit_label, property:properties(street, house_number, postal_code, city))',
+        'id, started_at, unit:units(id, unit_label, property:properties(street, house_number, postal_code, city))',
       )
-      .eq('tenant_id', user.id);
+      .eq('tenant_id', user.id)
+      .is('ended_at', null);
 
-    const verifiedTenancies = (tenancies ?? []).filter((t) => t.verified_at);
+    const verifiedTenancies = tenancies ?? [];
 
     // Mängel-Statistik
     const tenancyIds = verifiedTenancies.map((t) => t.id);

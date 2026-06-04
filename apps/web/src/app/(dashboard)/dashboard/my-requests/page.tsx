@@ -43,7 +43,7 @@ export default async function MyRequestsPage() {
     .from('tenancies')
     .select('id')
     .eq('tenant_id', user.id)
-    .not('verified_at', 'is', null);
+    .is('ended_at', null);
 
   const tenancyIds = (tenancies ?? []).map((t) => t.id);
 

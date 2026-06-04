@@ -36,10 +36,11 @@ export function JoinForm() {
         return;
       }
       setSuccess(true);
+      // Harte Weiterleitung statt router.push — invalidiert auch Server-Cache
+      // und lädt das Dashboard frisch (sodass die neue Tenancy sicher erscheint).
       setTimeout(() => {
-        router.push('/dashboard');
-        router.refresh();
-      }, 1000);
+        window.location.href = '/dashboard';
+      }, 800);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unbekannter Fehler.';
       setError(`${msg} — Bitte prüfe deine Internetverbindung und versuche es erneut.`);

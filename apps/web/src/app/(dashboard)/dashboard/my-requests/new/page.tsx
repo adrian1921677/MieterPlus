@@ -21,7 +21,7 @@ export default async function NewMyRequestPage() {
       'id, unit:units(id, unit_label, property:properties(street, house_number, postal_code, city))',
     )
     .eq('tenant_id', user.id)
-    .not('verified_at', 'is', null);
+    .is('ended_at', null);
 
   if (!tenancies || tenancies.length === 0) {
     return (
