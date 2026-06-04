@@ -6,7 +6,6 @@ import { TENANT_INVITATION_CODE_LENGTH } from '@mieterplus/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function JoinForm() {
   const router = useRouter();
@@ -24,22 +23,14 @@ export function JoinForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data: sess } = await supabase.auth.getSession();
-      if (!sess.session) {
-        setError('Bitte erneut anmelden.');
-        return;
-      }
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/verify-tenant-code`;
-      const res = await fetch(url, {
+      // Eigene Next.js API-Route — wird mit Vercel mit-deployt
+      // (Supabase Edge Function ist nicht zwingend deployed).
+      const res = await fetch('/api/tenant/verify-code', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${sess.session.access_token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: normalized }),
       });
-      const payload = await res.json();
+      const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(payload?.error?.message ?? 'Code konnte nicht eingelöst werden.');
         return;
@@ -50,7 +41,9 @@ export function JoinForm() {
         router.refresh();
       }, 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unbekannter Fehler.');
+      const msg = err instanceof Error ? err.message : 'Unbekannter Fehler.';
+      setError(`${msg} — Bitte prüfe deine Internetverbindung und versuche es erneut.`);
+      console.error('[verify-tenant-code]', err);
     } finally {
       setSubmitting(false);
     }
