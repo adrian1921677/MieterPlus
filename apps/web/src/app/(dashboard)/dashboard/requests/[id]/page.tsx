@@ -45,6 +45,9 @@ export default async function RequestDetailPage({
   const unit = tenancy?.units;
   const property = unit?.properties;
   const tenantProfile = tenancy?.profiles;
+  const isTenant = tenancy?.tenant_id === user.id;
+  const backHref = isTenant ? '/dashboard/my-requests' : '/dashboard/requests';
+  const backLabel = isTenant ? 'Zurück zu meinen Mängeln' : 'Zurück zur Liste';
 
   const { data: attachments } = await supabase
     .from('request_attachments')
@@ -61,9 +64,9 @@ export default async function RequestDetailPage({
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2">
-        <Link href="/dashboard/requests">
+        <Link href={backHref}>
           <ArrowLeft className="h-4 w-4" />
-          Zurück zur Liste
+          {backLabel}
         </Link>
       </Button>
 
@@ -110,6 +113,7 @@ export default async function RequestDetailPage({
         requestId={request.id}
         currentStatus={request.status}
         isLandlord={property?.owner_id === user.id}
+        isTenant={isTenant}
       />
 
       <CommentThread
