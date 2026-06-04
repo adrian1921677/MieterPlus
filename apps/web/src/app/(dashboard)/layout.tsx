@@ -5,7 +5,8 @@ import { signOut } from '@/app/actions/auth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/ui/verified-badge';
-import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, UserCheck, BadgeCheck } from 'lucide-react';
+import { MieterPlusBrand } from '@/components/brand';
+import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, UserCheck, BadgeCheck, PlusCircle, UserCircle } from 'lucide-react';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -23,7 +24,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!profile) redirect('/login');
 
   const navItems = [
-    { href: '/dashboard', label: 'Übersicht', icon: Home, roles: ['landlord', 'admin'] },
+    // Mieter
+    { href: '/dashboard', label: 'Übersicht', icon: Home, roles: ['tenant', 'landlord', 'admin'] },
+    {
+      href: '/dashboard/my-requests',
+      label: 'Meine Mängel',
+      icon: Wrench,
+      roles: ['tenant'],
+    },
+    {
+      href: '/dashboard/my-requests/new',
+      label: 'Mangel melden',
+      icon: PlusCircle,
+      roles: ['tenant'],
+    },
+    {
+      href: '/dashboard/profile',
+      label: 'Mein Profil',
+      icon: UserCircle,
+      roles: ['tenant'],
+    },
+    // Vermieter
     {
       href: '/dashboard/verify-identity',
       label: profile.identity_verified_at ? 'Identität ✓' : 'Identität verifizieren',
@@ -42,6 +63,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       icon: Wrench,
       roles: ['landlord', 'admin'],
     },
+    // Admin
     {
       href: '/dashboard/tenants',
       label: 'Mieter',
@@ -63,14 +85,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ].filter((item) => item.roles.includes(profile.role));
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <aside className="hidden w-64 border-r bg-white md:flex md:flex-col">
-        <div className="border-b p-6">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="rounded bg-primary px-2 py-1 text-sm font-bold text-primary-foreground">
-              ADB
-            </span>
-            <span className="font-semibold">MieterPlus</span>
+    <div className="flex min-h-screen bg-surface">
+      <aside className="hidden w-64 border-r border-zinc-100 bg-white md:flex md:flex-col">
+        <div className="border-b border-zinc-100 p-6 flex justify-center">
+          <Link href="/dashboard" aria-label="Mieter + Dashboard">
+            <MieterPlusBrand size={56} layout="stacked" />
           </Link>
         </div>
         <nav className="flex-1 space-y-1 p-3">
@@ -116,12 +135,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       <main className="flex-1">
-        <header className="flex items-center justify-between border-b bg-white px-6 py-4 md:hidden">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="rounded bg-primary px-2 py-1 text-xs font-bold text-primary-foreground">
-              ADB
-            </span>
-            <span className="font-semibold">MieterPlus</span>
+        <header className="flex items-center justify-between border-b border-zinc-100 bg-white px-6 py-4 md:hidden">
+          <Link href="/dashboard" aria-label="Mieter + Dashboard">
+            <MieterPlusBrand size={36} layout="horizontal" />
           </Link>
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">

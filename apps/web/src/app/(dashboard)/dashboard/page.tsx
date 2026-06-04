@@ -24,16 +24,102 @@ export default async function DashboardPage() {
   if (!profile) redirect('/login');
 
   if (profile.role === 'tenant') {
+    // Tenancies des Mieters laden (inkl. Wohnung + Adresse via unit → property)
+    const { data: tenancies } = await supabase
+      .from('tenancies')
+      .select(
+        'id, verified_at, unit:units(id, unit_label, property:properties(street, house_number, postal_code, city))',
+      )
+      .eq('tenant_id', user.id);
+
+    const verifiedTenancies = (tenancies ?? []).filter((t) => t.verified_at);
+
+    // Mängel-Statistik
+    const tenancyIds = verifiedTenancies.map((t) => t.id);
+    const { count: openMyRequests } = tenancyIds.length
+      ? await supabase
+          .from('requests')
+          .select('id', { count: 'exact', head: true })
+          .in('tenancy_id', tenancyIds)
+          .in('status', ['open', 'in_progress'])
+      : { count: 0 };
+
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Hallo {profile.full_name}!</CardTitle>
-          <CardDescription>
-            Das Web-Dashboard ist für Vermieter und Admins gedacht. Lade dir die MieterPlus-App
-            für dein Handy herunter, um Mängel zu melden.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Hallo {profile.full_name}!</h1>
+          <p className="text-muted-foreground">Schön, dass du da bist.</p>
+        </div>
+
+        {verifiedTenancies.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Erste Schritte: Wohnung verknüpfen</CardTitle>
+              <CardDescription>
+                Du brauchst einen 12-stelligen Einladungscode von deinem Vermieter, um dich
+                einer Wohnung zuzuordnen.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link href="/dashboard/join">Code eingeben</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              <StatCard
+                title="Meine Wohnungen"
+                value={verifiedTenancies.length}
+                icon={<Building2 className="h-4 w-4" />}
+              />
+              <StatCard
+                title="Offene Mängel"
+                value={openMyRequests ?? 0}
+                icon={<Wrench className="h-4 w-4" />}
+                href="/dashboard/my-requests"
+              />
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle>Meine Wohnungen</CardTitle>
+                    <CardDescription>
+                      Hier siehst du alle Wohnungen, die dir zugeordnet sind.
+                    </CardDescription>
+                  </div>
+                  <Button asChild size="sm">
+                    <Link href="/dashboard/my-requests/new">Mangel melden</Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {verifiedTenancies.map((t) => {
+                  const unit = Array.isArray(t.unit) ? t.unit[0] : t.unit;
+                  const prop = unit ? (Array.isArray(unit.property) ? unit.property[0] : unit.property) : null;
+                  return (
+                    <div
+                      key={t.id}
+                      className="flex flex-col gap-1 rounded-md border border-zinc-200 bg-white p-4"
+                    >
+                      <div className="font-medium">
+                        {prop ? `${prop.street} ${prop.house_number}` : 'Unbekannte Adresse'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {prop ? `${prop.postal_code} ${prop.city}` : ''}
+                        {unit?.unit_label ? ` · ${unit.unit_label}` : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
     );
   }
 

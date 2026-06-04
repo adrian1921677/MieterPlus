@@ -1,19 +1,13 @@
 import Link from 'next/link';
+import { MieterPlusBrand } from '@/components/brand';
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="flex min-h-screen flex-col bg-surface">
       <header className="border-b border-zinc-100 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-5 py-4 sm:px-8 lg:px-10">
-          <Link href="/" className="group flex items-center gap-3" aria-label="Mieter + Startseite">
-            <span className="leading-tight">
-              <span className="block text-[15px] font-black tracking-tight text-brand transition-[letter-spacing] duration-300 group-hover:tracking-wide">
-                ADB · Mieter <span aria-hidden className="plus-pulse">+</span>
-              </span>
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-                Digitale Mängelmeldung
-              </span>
-            </span>
+          <Link href="/" className="group" aria-label="Mieter + Startseite">
+            <MieterPlusBrand size={48} layout="stacked" />
           </Link>
           <a
             href="https://abdullahu.de"
