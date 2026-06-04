@@ -66,7 +66,17 @@ export function UnitsSection({ propertyId }: { propertyId: string }) {
       .select('id, unit_label, created_at')
       .single();
     if (insErr) {
-      setError(insErr.message);
+      // Häufigster RLS-Fehler in deutsche Erklärung übersetzen
+      if (/row-level security/i.test(insErr.message)) {
+        setError(
+          'Du kannst hier keine Wohneinheit anlegen. Mögliche Ursachen: ' +
+            '1) Die Immobilie ist noch nicht „verifiziert" (Status muss „verified" sein). ' +
+            '2) Du bist nicht der Eigentümer dieser Immobilie. ' +
+            '3) Du bist als Administrator eingeloggt — Admins prüfen nur, das Anlegen muss der Vermieter selbst machen.',
+        );
+      } else {
+        setError(insErr.message);
+      }
     } else if (data) {
       setUnits((prev) => [...prev, data].sort((a, b) => a.unit_label.localeCompare(b.unit_label)));
       setNewLabel('');
