@@ -152,6 +152,44 @@
   .plus-pulse:hover {
     animation-duration: 1.6s, 1.6s;
   }
+
+  /* Premium-Karte: dunkler Verlauf + durchlaufender Glanz */
+  .premium-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1d4f8c 0%, #2563a8 45%, #0ea5e9 100%);
+  }
+  .premium-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -60%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.45) 50%,
+      transparent 100%
+    );
+    transform: skewX(-20deg);
+    animation: premiumShine 4.5s ease-in-out infinite;
+  }
+  /* Goldener Sparkle-Akzent */
+  .premium-spark {
+    animation: sparkTwinkle 2.4s ease-in-out infinite;
+  }
+}
+
+@keyframes premiumShine {
+  0%   { left: -60%; }
+  55%  { left: 130%; }
+  100% { left: 130%; }
+}
+
+@keyframes sparkTwinkle {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50%      { opacity: 0.7; transform: scale(1.25) rotate(15deg); }
 }
 
 /* Plus color cycle — bleibt innerhalb der ADB-Akzentpalette */
@@ -173,11 +211,14 @@
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .marquee-track,
-  .plus-pulse {
+  .plus-pulse,
+  .premium-card::after,
+  .premium-spark {
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;
     transform: none !important;
   }
   .plus-pulse { color: #2563a8 !important; }
+  .premium-card::after { display: none; }
 }
