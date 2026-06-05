@@ -54,6 +54,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       roles: ['tenant'],
     },
     {
+      href: '/dashboard/my-appointments',
+      label: 'Termine',
+      icon: CalendarClock,
+      roles: ['tenant'],
+    },
+    {
       href: '/dashboard/profile',
       label: 'Mein Profil',
       icon: UserCircle,

@@ -49,6 +49,19 @@ export const VAULT_ALLOWED_MIME_TYPES = [
 ] as const;
 export const VAULT_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 
+// =============================================================================
+// Terminplaner
+// =============================================================================
+export const APPOINTMENT_PURPOSES = ['maintenance', 'viewing', 'meeting', 'other'] as const;
+export type AppointmentPurpose = (typeof APPOINTMENT_PURPOSES)[number];
+
+export const APPOINTMENT_PURPOSE_LABELS_DE: Record<AppointmentPurpose, string> = {
+  maintenance: 'Reparatur / Wartung',
+  viewing: 'Besichtigung',
+  meeting: 'Besprechung',
+  other: 'Sonstiges',
+};
+
 export const REQUEST_CATEGORIES = [
   'heating',
   'plumbing',
