@@ -48,6 +48,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       roles: ['tenant'],
     },
     {
+      href: '/dashboard/my-documents',
+      label: 'Meine Dokumente',
+      icon: FolderLock,
+      roles: ['tenant'],
+    },
+    {
       href: '/dashboard/profile',
       label: 'Mein Profil',
       icon: UserCircle,
@@ -85,7 +91,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       label: 'Dokumenten-Tresor',
       icon: FolderLock,
       roles: ['landlord', 'admin'],
-      premium: true,
     },
     {
       href: '/dashboard/appointments',

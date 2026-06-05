@@ -25,6 +25,30 @@ export const VAULT_QUOTA: Record<SubscriptionPlan, number> = {
   premium: 200,
 };
 
+export const VAULT_DOCUMENT_TYPES = [
+  'lease',
+  'utility_statement',
+  'house_rules',
+  'other',
+] as const;
+export type VaultDocumentType = (typeof VAULT_DOCUMENT_TYPES)[number];
+
+export const VAULT_DOCUMENT_TYPE_LABELS_DE: Record<VaultDocumentType, string> = {
+  lease: 'Mietvertrag',
+  utility_statement: 'Nebenkostenabrechnung',
+  house_rules: 'Hausordnung',
+  other: 'Sonstiges',
+};
+
+export const VAULT_ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/heic',
+  'image/webp',
+] as const;
+export const VAULT_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+
 export const REQUEST_CATEGORIES = [
   'heating',
   'plumbing',
