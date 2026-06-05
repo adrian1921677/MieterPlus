@@ -3,3 +3,4 @@ export * from './property';
 export * from './unit';
 export * from './invitation';
 export * from './request';
+export * from './handover';

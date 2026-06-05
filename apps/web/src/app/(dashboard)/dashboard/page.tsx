@@ -47,12 +47,43 @@ export default async function DashboardPage() {
           .in('status', ['open', 'in_progress'])
       : { count: 0 };
 
+    // Übergabeprotokolle, die noch auf die Unterschrift des Mieters warten
+    const { data: pendingHandovers } = tenancyIds.length
+      ? await supabase
+          .from('handover_protocols')
+          .select('id, type')
+          .in('tenancy_id', tenancyIds)
+          .neq('status', 'completed')
+          .is('tenant_signed_at', null)
+      : { data: [] };
+
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Hallo {profile.full_name}!</h1>
           <p className="text-muted-foreground">Schön, dass du da bist.</p>
         </div>
+
+        {pendingHandovers && pendingHandovers.length > 0 && (
+          <Card className="border-2 border-[#2563a8]/40 bg-[#eff6ff]">
+            <CardHeader>
+              <CardTitle className="text-base text-[#1d4f8c]">
+                Übergabeprotokoll wartet auf deine Unterschrift
+              </CardTitle>
+              <CardDescription>
+                Dein Vermieter hat ein Übergabeprotokoll erstellt. Bitte prüfe es und unterschreibe
+                digital.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {pendingHandovers.map((h) => (
+                <Button key={h.id} asChild variant="default" className="w-full sm:w-auto">
+                  <Link href={`/dashboard/handover/${h.id}`}>Protokoll ansehen &amp; unterschreiben</Link>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {verifiedTenancies.length === 0 ? (
           <Card>
