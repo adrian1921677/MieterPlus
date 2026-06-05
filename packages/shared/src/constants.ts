@@ -4,6 +4,27 @@ export const APP_PUBLISHER = 'ADB';
 export const ROLES = ['tenant', 'landlord', 'admin'] as const;
 export type Role = (typeof ROLES)[number];
 
+// =============================================================================
+// Abo-Modell (Premium für Vermieter)
+// =============================================================================
+export const SUBSCRIPTION_PLANS = ['basic', 'premium'] as const;
+export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
+
+export const SUBSCRIPTION_PLAN_LABELS_DE: Record<SubscriptionPlan, string> = {
+  basic: 'Basic',
+  premium: 'Premium',
+};
+
+// Feature-Keys für Premium-Gating (zentral, damit Frontend + API gleich sprechen)
+export const PREMIUM_FEATURES = ['handover', 'vault_extended', 'appointments'] as const;
+export type PremiumFeature = (typeof PREMIUM_FEATURES)[number];
+
+// Dokumenten-Tresor Kontingent pro Plan
+export const VAULT_QUOTA: Record<SubscriptionPlan, number> = {
+  basic: 5,
+  premium: 200,
+};
+
 export const REQUEST_CATEGORIES = [
   'heating',
   'plumbing',

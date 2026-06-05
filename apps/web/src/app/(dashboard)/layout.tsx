@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { MieterPlusBrand } from '@/components/brand';
-import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, UserCheck, BadgeCheck, PlusCircle, UserCircle } from 'lucide-react';
+import { computeIsPremium } from '@/lib/subscription';
+import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, UserCheck, BadgeCheck, PlusCircle, UserCircle, Sparkles, FileSignature, FolderLock, CalendarClock } from 'lucide-react';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -17,13 +18,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, role, full_name, identity_verified_at')
+    .select('id, role, full_name, identity_verified_at, subscription_plan, subscription_valid_until')
     .eq('id', user.id)
     .single();
 
   if (!profile) redirect('/login');
 
-  const navItems = [
+  const isPremium = computeIsPremium(profile.subscription_plan, profile.subscription_valid_until);
+
+  const navItems: {
+    href: string;
+    label: string;
+    icon: typeof Home;
+    roles: string[];
+    premium?: boolean;
+  }[] = [
     // Mieter
     { href: '/dashboard', label: 'Übersicht', icon: Home, roles: ['tenant', 'landlord', 'admin'] },
     {
@@ -63,6 +72,28 @@ export default async function DashboardLayout({ children }: { children: React.Re
       icon: Wrench,
       roles: ['landlord', 'admin'],
     },
+    // Vermieter — Premium-Features
+    {
+      href: '/dashboard/handover',
+      label: 'Übergabeprotokoll',
+      icon: FileSignature,
+      roles: ['landlord', 'admin'],
+      premium: true,
+    },
+    {
+      href: '/dashboard/vault',
+      label: 'Dokumenten-Tresor',
+      icon: FolderLock,
+      roles: ['landlord', 'admin'],
+      premium: true,
+    },
+    {
+      href: '/dashboard/appointments',
+      label: 'Terminplaner',
+      icon: CalendarClock,
+      roles: ['landlord', 'admin'],
+      premium: true,
+    },
     // Admin
     {
       href: '/dashboard/admin/users',
@@ -89,10 +120,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <aside className="hidden w-64 border-r border-zinc-100 bg-white md:flex md:flex-col">
         <div className="border-b border-zinc-100 p-6 flex justify-center">
           <Link href="/dashboard" aria-label="Mieter + Dashboard">
-            <MieterPlusBrand size={72} layout="stacked" />
+            <MieterPlusBrand size={104} layout="stacked" />
           </Link>
         </div>
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -101,8 +132,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 href={item.href}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
               >
-                <Icon className="h-4 w-4" />
-                {item.label}
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="flex-1">{item.label}</span>
+                {item.premium && !isPremium && profile.role !== 'admin' && (
+                  <span className="rounded bg-[#2563a8]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#2563a8]">
+                    Pro
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -113,7 +149,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <span>{profile.full_name}</span>
               {profile.identity_verified_at && <VerifiedBadge size={14} label="Identität verifiziert" />}
             </div>
-            <div className="mt-1">
+            <div className="mt-1 flex flex-wrap items-center gap-1">
               {profile.role === 'admin' ? (
                 <Badge variant="destructive" className="text-[10px]">
                   Administrator · Vollzugriff
@@ -123,8 +159,25 @@ export default async function DashboardLayout({ children }: { children: React.Re
               ) : (
                 <Badge variant="secondary" className="text-[10px]">Mieter</Badge>
               )}
+              {isPremium && (
+                <Badge className="gap-0.5 bg-[#2563a8] text-[10px] text-white">
+                  <Sparkles className="h-2.5 w-2.5" /> Premium
+                </Badge>
+              )}
             </div>
           </div>
+
+          {/* Upgrade-Hinweis für Basic-Vermieter */}
+          {profile.role === 'landlord' && !isPremium && (
+            <Link
+              href="/dashboard/upgrade"
+              className="mb-3 flex items-center justify-center gap-1.5 rounded-md bg-[#2563a8] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1d4f8c]"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Auf Premium upgraden
+            </Link>
+          )}
+
           <form action={signOut}>
             <Button type="submit" variant="outline" size="sm" className="w-full">
               <LogOut className="h-3 w-3" />
@@ -137,7 +190,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1">
         <header className="flex items-center justify-between border-b border-zinc-100 bg-white px-6 py-4 md:hidden">
           <Link href="/dashboard" aria-label="Mieter + Dashboard">
-            <MieterPlusBrand size={44} layout="horizontal" />
+            <MieterPlusBrand size={52} layout="horizontal" />
           </Link>
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">

@@ -5,6 +5,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/s
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/ui/verified-badge';
+import { SubscriptionToggle } from './subscription-toggle';
 
 export const metadata = { title: 'User-Verwaltung' };
 
@@ -40,7 +41,9 @@ export default async function AdminUsersPage({
   // Profile + zusammenhängende Counts (Tenancies für Mieter, Properties für Vermieter)
   const { data: profiles } = await service
     .from('profiles')
-    .select('id, full_name, role, identity_verified_at, created_at')
+    .select(
+      'id, full_name, role, identity_verified_at, created_at, subscription_plan, subscription_valid_until',
+    )
     .order('created_at', { ascending: false });
 
   // Auth-User (E-Mails) — nur via Service-Client möglich
@@ -142,6 +145,13 @@ export default async function AdminUsersPage({
                           <Wrench className="h-3 w-3" />
                           {tenCount} {tenCount === 1 ? 'Wohnung' : 'Wohnungen'}
                         </Badge>
+                      )}
+                      {p.role === 'landlord' && (
+                        <SubscriptionToggle
+                          userId={p.id}
+                          initialPlan={p.subscription_plan === 'premium' ? 'premium' : 'basic'}
+                          validUntil={p.subscription_valid_until ?? null}
+                        />
                       )}
                       <span className="text-muted-foreground">
                         {new Date(p.created_at).toLocaleDateString('de-DE', {
