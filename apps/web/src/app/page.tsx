@@ -62,7 +62,7 @@ export default function HomePage() {
       <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-5 py-4 sm:px-8 lg:px-10">
           <Link href="/" className="group" aria-label="Mieter + Startseite">
-            <MieterPlusBrand size={52} layout="stacked" />
+            <MieterPlusBrand size={64} layout="stacked" />
           </Link>
 
           <nav className="flex items-center gap-3" aria-label="Hauptnavigation">

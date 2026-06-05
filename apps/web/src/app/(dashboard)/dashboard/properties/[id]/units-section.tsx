@@ -10,6 +10,30 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { formatDate } from '@/lib/utils';
 
+// Häufige Wohnungs-Bezeichnungen — User kann mit "Andere…" auch eigenes eingeben
+const STANDARD_UNIT_LABELS = [
+  'EG Links',
+  'EG Mitte',
+  'EG Rechts',
+  '1. OG Links',
+  '1. OG Mitte',
+  '1. OG Rechts',
+  '2. OG Links',
+  '2. OG Mitte',
+  '2. OG Rechts',
+  '3. OG Links',
+  '3. OG Mitte',
+  '3. OG Rechts',
+  '4. OG Links',
+  '4. OG Mitte',
+  '4. OG Rechts',
+  'Dachgeschoss Links',
+  'Dachgeschoss Mitte',
+  'Dachgeschoss Rechts',
+  'Souterrain',
+] as const;
+const CUSTOM_OPTION = '__custom__';
+
 type Unit = {
   id: string;
   unit_label: string;
@@ -27,10 +51,14 @@ type Invitation = {
 export function UnitsSection({ propertyId }: { propertyId: string }) {
   const [units, setUnits] = useState<Unit[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [newLabel, setNewLabel] = useState('');
+  const [selectedOption, setSelectedOption] = useState<string>('');
+  const [customLabel, setCustomLabel] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const newLabel = selectedOption === CUSTOM_OPTION ? customLabel : selectedOption;
+  const isCustom = selectedOption === CUSTOM_OPTION;
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -74,12 +102,15 @@ export function UnitsSection({ propertyId }: { propertyId: string }) {
             '2) Du bist nicht der Eigentümer dieser Immobilie. ' +
             '3) Du bist als Administrator eingeloggt — Admins prüfen nur, das Anlegen muss der Vermieter selbst machen.',
         );
+      } else if (/duplicate|unique/i.test(insErr.message)) {
+        setError('Eine Wohneinheit mit dieser Bezeichnung existiert bereits in dieser Immobilie.');
       } else {
         setError(insErr.message);
       }
     } else if (data) {
       setUnits((prev) => [...prev, data].sort((a, b) => a.unit_label.localeCompare(b.unit_label)));
-      setNewLabel('');
+      setSelectedOption('');
+      setCustomLabel('');
     }
     setCreating(false);
   };
@@ -114,23 +145,48 @@ export function UnitsSection({ propertyId }: { propertyId: string }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <Label htmlFor="unit-label" className="sr-only">
-              Wohnungsbezeichnung
-            </Label>
-            <Input
-              id="unit-label"
-              placeholder='z.B. "WE 12, 3. OG links"'
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addUnit()}
-            />
+        <div className="space-y-2">
+          <Label htmlFor="unit-select">Wohnung wählen</Label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select
+              id="unit-select"
+              value={selectedOption}
+              onChange={(e) => {
+                setSelectedOption(e.target.value);
+                if (e.target.value !== CUSTOM_OPTION) setCustomLabel('');
+              }}
+              className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">— Bitte wählen —</option>
+              {STANDARD_UNIT_LABELS.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+              <option value={CUSTOM_OPTION}>Andere Bezeichnung …</option>
+            </select>
+            {!isCustom && (
+              <Button onClick={addUnit} disabled={creating || !newLabel.trim()}>
+                <Plus className="h-4 w-4" />
+                Anlegen
+              </Button>
+            )}
           </div>
-          <Button onClick={addUnit} disabled={creating || !newLabel.trim()}>
-            <Plus className="h-4 w-4" />
-            Anlegen
-          </Button>
+          {isCustom && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                placeholder='z.B. "WE 12, Hinterhof"'
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addUnit()}
+                autoFocus
+              />
+              <Button onClick={addUnit} disabled={creating || !customLabel.trim()}>
+                <Plus className="h-4 w-4" />
+                Anlegen
+              </Button>
+            </div>
+          )}
         </div>
 
         {error && (

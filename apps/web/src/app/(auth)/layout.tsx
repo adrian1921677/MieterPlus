@@ -7,7 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <header className="border-b border-zinc-100 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-8 px-5 py-4 sm:px-8 lg:px-10">
           <Link href="/" className="group" aria-label="Mieter + Startseite">
-            <MieterPlusBrand size={48} layout="stacked" />
+            <MieterPlusBrand size={60} layout="stacked" />
           </Link>
           <a
             href="https://abdullahu.de"

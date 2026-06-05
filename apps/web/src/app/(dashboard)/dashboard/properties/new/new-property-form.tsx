@@ -48,13 +48,47 @@ export function NewPropertyForm() {
         setServerError('Bitte erneut anmelden.');
         return;
       }
+
+      // Duplikat-Check: gleiche Adresse darf es nur einmal geben
+      const normalize = (s: string) => s.trim().toLowerCase();
+      const { data: existing } = await supabase
+        .from('properties')
+        .select('id, owner_id')
+        .eq('postal_code', values.postal_code.trim())
+        .ilike('street', values.street.trim())
+        .ilike('house_number', values.house_number.trim())
+        .ilike('city', values.city.trim())
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const isMine = existing.owner_id === userData.user.id;
+        setServerError(
+          isMine
+            ? `Diese Adresse hast du bereits angelegt. Bestehende Immobilie ansehen?`
+            : 'Diese Adresse ist bereits im System hinterlegt. Wende dich an den Support, falls das ein Fehler ist.',
+        );
+        if (isMine) {
+          // Direkt zur bestehenden Property weiterleiten
+          setTimeout(() => {
+            router.push(`/dashboard/properties/${existing.id}`);
+          }, 1500);
+        }
+        return;
+      }
+
       const { data, error } = await supabase
         .from('properties')
         .insert({ ...values, owner_id: userData.user.id })
         .select('id')
         .single();
       if (error) {
-        setServerError(error.message);
+        // Datenbank-Level Unique-Constraint als Fallback
+        if (/duplicate|unique/i.test(error.message)) {
+          setServerError('Diese Adresse existiert bereits im System.');
+        } else {
+          setServerError(error.message);
+        }
         return;
       }
       router.push(`/dashboard/properties/${data.id}?just_created=1`);

@@ -2,15 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  REQUEST_STATUS_LABELS_DE,
-  type RequestStatus,
-} from '@mieterplus/shared';
+import { type RequestStatus } from '@mieterplus/shared';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Wrench, XCircle, Archive, RotateCcw } from 'lucide-react';
+import { getStatusStyle } from '@/lib/request-status';
 
 type Props = {
   requestId: string;
@@ -18,17 +16,6 @@ type Props = {
   isLandlord: boolean;
   isTenant: boolean;
 };
-
-function statusVariant(
-  s: string,
-): 'success' | 'warning' | 'info' | 'secondary' | 'destructive' {
-  if (s === 'closed') return 'success';
-  if (s === 'resolved') return 'info';
-  if (s === 'in_progress') return 'warning';
-  if (s === 'open') return 'warning';
-  if (s === 'rejected') return 'destructive';
-  return 'secondary';
-}
 
 export function RequestActions({ requestId, currentStatus, isLandlord, isTenant }: Props) {
   const router = useRouter();
@@ -73,26 +60,21 @@ export function RequestActions({ requestId, currentStatus, isLandlord, isTenant 
     setSaving(false);
   };
 
+  const style = getStatusStyle(status);
+
   return (
-    <Card>
+    <Card className={`border-l-4 ${style.ring}`}>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base">Status</CardTitle>
-            <CardDescription>
-              {status === 'closed'
-                ? 'Dieser Mangel ist abgeschlossen und archiviert.'
-                : status === 'resolved'
-                  ? 'Der Vermieter hat den Mangel als behoben markiert — wartet auf Bestätigung des Mieters.'
-                  : status === 'in_progress'
-                    ? 'Wird gerade bearbeitet.'
-                    : status === 'rejected'
-                      ? 'Diese Mangelmeldung wurde abgelehnt.'
-                      : 'Offen, noch nicht in Bearbeitung.'}
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <span aria-hidden className={`inline-block h-2.5 w-2.5 rounded-full ${style.dot}`} />
+              Status
+            </CardTitle>
+            <CardDescription>{style.description}</CardDescription>
           </div>
-          <Badge variant={statusVariant(status)} className="text-xs">
-            {REQUEST_STATUS_LABELS_DE[status as RequestStatus]}
+          <Badge variant={style.badge} className="text-xs">
+            {style.label}
           </Badge>
         </div>
       </CardHeader>

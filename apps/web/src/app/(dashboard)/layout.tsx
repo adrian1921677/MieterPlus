@@ -65,8 +65,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     },
     // Admin
     {
-      href: '/dashboard/tenants',
-      label: 'Mieter',
+      href: '/dashboard/admin/users',
+      label: 'Alle User',
       icon: Users,
       roles: ['admin'],
     },
@@ -89,7 +89,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <aside className="hidden w-64 border-r border-zinc-100 bg-white md:flex md:flex-col">
         <div className="border-b border-zinc-100 p-6 flex justify-center">
           <Link href="/dashboard" aria-label="Mieter + Dashboard">
-            <MieterPlusBrand size={56} layout="stacked" />
+            <MieterPlusBrand size={72} layout="stacked" />
           </Link>
         </div>
         <nav className="flex-1 space-y-1 p-3">
@@ -137,7 +137,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1">
         <header className="flex items-center justify-between border-b border-zinc-100 bg-white px-6 py-4 md:hidden">
           <Link href="/dashboard" aria-label="Mieter + Dashboard">
-            <MieterPlusBrand size={36} layout="horizontal" />
+            <MieterPlusBrand size={44} layout="horizontal" />
           </Link>
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">
