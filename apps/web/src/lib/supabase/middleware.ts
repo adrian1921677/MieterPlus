@@ -32,14 +32,19 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthRoute = path.startsWith('/login') || path.startsWith('/signup');
+  // Auth-Routen für NICHT eingeloggte User (eingeloggte werden zu /dashboard geschickt)
+  const isAuthRoute =
+    path.startsWith('/login') ||
+    path.startsWith('/signup') ||
+    path.startsWith('/forgot-password');
   // /auth/* (OAuth-Callback) MUSS public sein — der User ist beim Callback
-  // noch nicht eingeloggt, die Session entsteht erst durch den Token-Exchange
-  // in /auth/callback. Ohne diese Ausnahme würde die Middleware den User
-  // auf /login schicken, bevor der Code überhaupt eingelöst werden kann.
+  // noch nicht eingeloggt, die Session entsteht erst durch den Token-Exchange.
+  // /reset-password ist public (kein Login-Redirect), aber KEIN isAuthRoute,
+  // da die Recovery-Session sonst sofort zu /dashboard umgeleitet würde.
   const isPublic =
     path === '/' ||
     isAuthRoute ||
+    path.startsWith('/reset-password') ||
     path.startsWith('/_next') ||
     path.startsWith('/api/health') ||
     path.startsWith('/auth/');

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { GoogleAuthButton } from '@/components/google-auth-button';
+import { AppleAuthButton } from '@/components/apple-auth-button';
 
 /**
  * Signup-Block: Erst Rolle wählen (Mieter / Vermieter), dann mit Google
@@ -38,10 +39,16 @@ export function GoogleSignupSection() {
         </button>
       </div>
 
-      <GoogleAuthButton
-        label={role === 'landlord' ? 'Als Vermieter mit Google registrieren' : 'Als Mieter mit Google registrieren'}
-        intendedRole={role}
-      />
+      <div className="space-y-2">
+        <GoogleAuthButton
+          label={role === 'landlord' ? 'Als Vermieter mit Google' : 'Als Mieter mit Google'}
+          intendedRole={role}
+        />
+        <AppleAuthButton
+          label={role === 'landlord' ? 'Als Vermieter mit Apple' : 'Als Mieter mit Apple'}
+          intendedRole={role}
+        />
+      </div>
     </div>
   );
 }
