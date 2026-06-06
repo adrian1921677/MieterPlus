@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Star } from 'lucide-react';
 import {
   REQUEST_CATEGORY_LABELS_DE,
   REQUEST_PRIORITY_LABELS_DE,
@@ -33,7 +33,7 @@ export default async function RequestDetailPage({
   const { data: request } = await supabase
     .from('requests')
     .select(
-      'id, title, description, category, priority, status, created_at, tenancy_id, tenancies(unit_id, tenant_id, units(unit_label, property_id, properties(street, house_number, postal_code, city, owner_id)), profiles:tenant_id(full_name))',
+      'id, title, description, category, priority, status, created_at, resolution_rating, resolution_feedback, tenancy_id, tenancies(unit_id, tenant_id, units(unit_label, property_id, properties(street, house_number, postal_code, city, owner_id)), profiles:tenant_id(full_name))',
     )
     .eq('id', id)
     .single();
@@ -115,6 +115,36 @@ export default async function RequestDetailPage({
         isLandlord={property?.owner_id === user.id}
         isTenant={isTenant}
       />
+
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {(request as any).resolution_rating ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Bewertung der Behebung</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Star
+                  key={n}
+                  className={`h-5 w-5 ${
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (request as any).resolution_rating >= n
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-zinc-300'
+                  }`}
+                />
+              ))}
+            </div>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {(request as any).resolution_feedback && (
+              <p className="text-sm text-muted-foreground">
+                „{(request as any).resolution_feedback}"
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <CommentThread
         requestId={request.id}

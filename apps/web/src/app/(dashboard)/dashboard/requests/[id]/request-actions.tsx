@@ -7,7 +7,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, Wrench, XCircle, Archive, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Wrench, XCircle, Archive, RotateCcw, Star } from 'lucide-react';
 import { getStatusStyle } from '@/lib/request-status';
 
 type Props = {
@@ -22,6 +22,8 @@ export function RequestActions({ requestId, currentStatus, isLandlord, isTenant 
   const [status, setStatus] = useState(currentStatus);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
 
   // Vermieter-Status-Wechsel (klassisch, über RLS)
   const landlordUpdate = async (newStatus: RequestStatus) => {
@@ -48,7 +50,11 @@ export function RequestActions({ requestId, currentStatus, isLandlord, isTenant 
     const res = await fetch('/api/tenant/confirm-resolved', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request_id: requestId, action }),
+      body: JSON.stringify({
+        request_id: requestId,
+        action,
+        ...(action === 'confirm' && rating ? { rating } : {}),
+      }),
     });
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -151,6 +157,32 @@ export function RequestActions({ requestId, currentStatus, isLandlord, isTenant 
               Wenn alles wieder funktioniert, bestätige bitte — das Ticket wird dann
               geschlossen und archiviert. Falls nicht, kannst du es zurück an den Vermieter geben.
             </p>
+
+            {/* Optionale Sterne-Bewertung */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-xs text-blue-900/70">Behebung bewerten (optional):</span>
+              <div className="flex gap-0.5" onMouseLeave={() => setHoverRating(0)}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setRating(n === rating ? 0 : n)}
+                    onMouseEnter={() => setHoverRating(n)}
+                    className="p-0.5"
+                    aria-label={`${n} Sterne`}
+                  >
+                    <Star
+                      className={`h-5 w-5 ${
+                        (hoverRating || rating) >= n
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-blue-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2 pt-1">
               <Button size="sm" onClick={() => tenantConfirm('confirm')} disabled={saving}>
                 <Archive className="h-4 w-4" />

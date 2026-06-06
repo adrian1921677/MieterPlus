@@ -11,6 +11,7 @@ import {
   REQUEST_CATEGORIES,
   REQUEST_PRIORITY_LABELS_DE,
   REQUEST_PRIORITIES,
+  REQUEST_TEMPLATES,
   STORAGE_BUCKETS,
   MAX_ATTACHMENTS_PER_REQUEST,
   MAX_ATTACHMENT_SIZE_BYTES,
@@ -40,11 +41,17 @@ export function NewRequestForm({ tenancyOptions }: { tenancyOptions: TenancyOpti
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CreateRequestInput>({
     resolver: zodResolver(createRequestInputSchema),
     defaultValues: { priority: 'normal' },
   });
+
+  const applyTemplate = (title: string, category: (typeof REQUEST_TEMPLATES)[number]['category']) => {
+    setValue('title', title, { shouldValidate: true });
+    setValue('category', category, { shouldValidate: true });
+  };
 
   const addFiles = (incoming: FileList | null) => {
     if (!incoming) return;
@@ -174,6 +181,23 @@ export function NewRequestForm({ tenancyOptions }: { tenancyOptions: TenancyOpti
           </select>
         </div>
       )}
+
+      {/* Schnellauswahl-Vorlagen */}
+      <div className="space-y-2">
+        <Label>Häufige Mängel (Schnellauswahl)</Label>
+        <div className="flex flex-wrap gap-2">
+          {REQUEST_TEMPLATES.map((t) => (
+            <button
+              key={t.title}
+              type="button"
+              onClick={() => applyTemplate(t.title, t.category)}
+              className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium transition hover:border-[#2563a8] hover:bg-[#eff6ff] hover:text-[#2563a8]"
+            >
+              {t.title}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="title">Titel</Label>

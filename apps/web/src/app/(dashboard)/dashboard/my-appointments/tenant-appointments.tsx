@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarCheck, MapPin } from 'lucide-react';
+import { CalendarCheck, MapPin, CalendarPlus } from 'lucide-react';
 import type { AppointmentPurpose } from '@mieterplus/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -90,7 +90,14 @@ export function TenantAppointments({
                       </div>
                     )}
                   </div>
-                  {!booked && (
+                  {booked ? (
+                    <Button asChild size="sm" variant="outline">
+                      <a href={`/api/appointments/${slot.id}/ics`}>
+                        <CalendarPlus className="h-3.5 w-3.5" />
+                        Zum Kalender
+                      </a>
+                    </Button>
+                  ) : (
                     <Button size="sm" onClick={() => book(slot.id)} disabled={loadingId === slot.id}>
                       {loadingId === slot.id ? <Spinner className="h-3.5 w-3.5" /> : <CalendarCheck className="h-3.5 w-3.5" />}
                       Verbindlich buchen

@@ -107,6 +107,12 @@ export function CommentThread({
         },
       ]);
       reset({ request_id: requestId, message: '' });
+      // Gegenpartei benachrichtigen (best-effort, blockiert UI nicht)
+      void fetch(`/api/requests/${requestId}/notify-comment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: values.message }),
+      }).catch(() => {});
     }
   };
 

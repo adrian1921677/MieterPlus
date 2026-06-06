@@ -23,6 +23,12 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const requestId = body?.request_id;
   const action = body?.action;
+  const rating =
+    typeof body?.rating === 'number' && body.rating >= 1 && body.rating <= 5
+      ? Math.round(body.rating)
+      : null;
+  const feedback =
+    typeof body?.feedback === 'string' ? body.feedback.trim().slice(0, 1000) || null : null;
   if (
     typeof requestId !== 'string' ||
     !/^[0-9a-f-]{36}$/i.test(requestId) ||
@@ -72,9 +78,16 @@ export async function POST(request: NextRequest) {
 
   const newStatus = action === 'confirm' ? 'closed' : 'in_progress';
 
+  // Bei Bestätigung optional Bewertung mitspeichern
+  const updatePayload: Record<string, unknown> = { status: newStatus };
+  if (action === 'confirm' && rating) {
+    updatePayload.resolution_rating = rating;
+    updatePayload.resolution_feedback = feedback;
+  }
+
   const { error: updErr } = await service
     .from('requests')
-    .update({ status: newStatus })
+    .update(updatePayload)
     .eq('id', requestId);
 
   if (updErr) {

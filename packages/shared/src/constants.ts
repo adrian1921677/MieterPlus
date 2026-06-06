@@ -115,6 +115,19 @@ export const REQUEST_PRIORITY_LABELS_DE: Record<RequestPriority, string> = {
   urgent: 'Dringend',
 };
 
+// Schnellauswahl-Vorlagen beim Mangel melden
+export const REQUEST_TEMPLATES: { title: string; category: RequestCategory }[] = [
+  { title: 'Heizung wird nicht warm', category: 'heating' },
+  { title: 'Wasserhahn tropft', category: 'plumbing' },
+  { title: 'Verstopfter Abfluss', category: 'plumbing' },
+  { title: 'Steckdose ohne Strom', category: 'electrical' },
+  { title: 'Licht / Lampe defekt', category: 'electrical' },
+  { title: 'Schimmel an der Wand', category: 'structural' },
+  { title: 'Fenster undicht / klemmt', category: 'structural' },
+  { title: 'Gerät defekt (Herd/Kühlschrank)', category: 'appliance' },
+  { title: 'Schädlinge / Ungeziefer', category: 'pest' },
+];
+
 export const REQUEST_STATUSES = [
   'open',
   'in_progress',

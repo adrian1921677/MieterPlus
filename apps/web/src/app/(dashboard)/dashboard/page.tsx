@@ -227,6 +227,41 @@ export default async function DashboardPage() {
       .in('status', ['open', 'in_progress']),
   ]);
 
+  // Statistik-Daten (RLS scoped auf eigene + verwaltete Mängel)
+  const { data: statReqs } = await supabase
+    .from('requests')
+    .select('status, created_at, closed_at, resolution_rating');
+  const reqs = statReqs ?? [];
+  const total = reqs.length;
+  const closedReqs = reqs.filter((r) => r.status === 'closed' && r.closed_at);
+  const resolvedShare = total > 0 ? Math.round((closedReqs.length / total) * 100) : 0;
+  // Ø Bearbeitungsdauer in Tagen
+  const avgDays =
+    closedReqs.length > 0
+      ? Math.round(
+          (closedReqs.reduce(
+            (sum, r) =>
+              sum + (new Date(r.closed_at!).getTime() - new Date(r.created_at).getTime()),
+            0,
+          ) /
+            closedReqs.length /
+            (1000 * 60 * 60 * 24)) *
+            10,
+        ) / 10
+      : null;
+  const rated = reqs.filter((r) => r.resolution_rating);
+  const avgRating =
+    rated.length > 0
+      ? Math.round((rated.reduce((s, r) => s + (r.resolution_rating ?? 0), 0) / rated.length) * 10) /
+        10
+      : null;
+  const statusCounts = {
+    open: reqs.filter((r) => r.status === 'open').length,
+    in_progress: reqs.filter((r) => r.status === 'in_progress').length,
+    resolved: reqs.filter((r) => r.status === 'resolved').length,
+    closed: reqs.filter((r) => r.status === 'closed').length,
+  };
+
   return (
     <div className="space-y-6">
       <PendingManagerInvites />
@@ -262,6 +297,59 @@ export default async function DashboardPage() {
           variant={(urgentRequests ?? 0) > 0 ? 'destructive' : 'default'}
         />
       </div>
+
+      {/* Statistik */}
+      {total > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Statistik</CardTitle>
+            <CardDescription>Auswertung deiner Mängelmeldungen.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <div className="text-2xl font-black text-brand">{resolvedShare}%</div>
+                <div className="text-xs text-muted-foreground">erledigt &amp; archiviert</div>
+              </div>
+              <div>
+                <div className="text-2xl font-black text-brand">
+                  {avgDays !== null ? `${avgDays} Tage` : '—'}
+                </div>
+                <div className="text-xs text-muted-foreground">Ø Bearbeitungsdauer</div>
+              </div>
+              <div>
+                <div className="flex items-center gap-1 text-2xl font-black text-brand">
+                  {avgRating !== null ? avgRating : '—'}
+                  {avgRating !== null && <span className="text-amber-400">★</span>}
+                </div>
+                <div className="text-xs text-muted-foreground">Ø Bewertung</div>
+              </div>
+            </div>
+
+            {/* Status-Verteilung als Balken */}
+            <div className="space-y-2">
+              {[
+                { key: 'open', label: 'Offen', color: 'bg-amber-400' },
+                { key: 'in_progress', label: 'In Bearbeitung', color: 'bg-[#2563a8]' },
+                { key: 'resolved', label: 'Behoben (wartet)', color: 'bg-sky-400' },
+                { key: 'closed', label: 'Abgeschlossen', color: 'bg-emerald-500' },
+              ].map((s) => {
+                const val = statusCounts[s.key as keyof typeof statusCounts];
+                const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                return (
+                  <div key={s.key} className="flex items-center gap-3 text-sm">
+                    <span className="w-32 shrink-0 text-muted-foreground">{s.label}</span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                      <div className={`h-full rounded-full ${s.color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-8 text-right font-medium">{val}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
