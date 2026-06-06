@@ -1,16 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { APPOINTMENT_PURPOSES } from '@mieterplus/shared';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
-import { requirePremium } from '@/lib/guards';
+import { requireUser } from '@/lib/guards';
 
 export const runtime = 'nodejs';
 
 /**
- * Vermieter (Premium) erstellt einen Termin-Slot.
+ * Termin-Slot anlegen — durch Premium-Eigentümer, Admin oder Hausverwaltung
+ * mit 'appointments'-Recht.
  * Body: { property_id, title, purpose, starts_at, ends_at }
  */
 export async function POST(request: NextRequest) {
-  const guard = await requirePremium();
+  const guard = await requireUser();
   if (!guard.ok) return guard.response;
 
   const body = await request.json().catch(() => null);
@@ -40,13 +41,28 @@ export async function POST(request: NextRequest) {
 
   const service = createSupabaseServiceClient();
 
-  // Property gehört dem Vermieter?
+  // Berechtigung: Eigentümer (Premium) ODER Admin ODER Hausverwaltung mit 'appointments'
   const { data: property } = await service
     .from('properties')
     .select('owner_id')
     .eq('id', propertyId)
     .single();
-  if (!property || (guard.user.role !== 'admin' && property.owner_id !== guard.user.id)) {
+  if (!property) {
+    return NextResponse.json({ error: { message: 'Immobilie nicht gefunden' } }, { status: 404 });
+  }
+  const isOwner = property.owner_id === guard.user.id;
+  let isManagerWithAppointments = false;
+  if (!isOwner && guard.user.role !== 'admin') {
+    const { data: mgr } = await service
+      .from('property_managers')
+      .select('permissions, property_manager_properties!inner(property_id)')
+      .eq('manager_id', guard.user.id)
+      .eq('status', 'active')
+      .eq('property_manager_properties.property_id', propertyId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    isManagerWithAppointments = (mgr ?? []).some((m: any) => m.permissions?.appointments === true);
+  }
+  if (!isOwner && !isManagerWithAppointments && guard.user.role !== 'admin') {
     return NextResponse.json({ error: { message: 'Keine Berechtigung' } }, { status: 403 });
   }
 

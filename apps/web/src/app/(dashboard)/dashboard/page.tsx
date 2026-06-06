@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PropertyMap } from '@/components/property-map';
+import { PendingManagerInvites } from './pending-invites';
 
 export const metadata = { title: 'Übersicht' };
 
@@ -59,6 +60,7 @@ export default async function DashboardPage() {
 
     return (
       <div className="space-y-6">
+        <PendingManagerInvites />
         <div>
           <h1 className="text-2xl font-bold">Hallo {profile.full_name}!</h1>
           <p className="text-muted-foreground">Schön, dass du da bist.</p>
@@ -178,6 +180,7 @@ export default async function DashboardPage() {
       .eq('ownership_status', 'pending');
     return (
       <div className="space-y-6">
+        <PendingManagerInvites />
         <h1 className="text-2xl font-bold">Hallo {profile.full_name}</h1>
         <Card>
           <CardHeader>
@@ -226,6 +229,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <PendingManagerInvites />
       <div>
         <h1 className="text-2xl font-bold">Willkommen, {profile.full_name}</h1>
         <p className="text-muted-foreground">Hier ist dein aktueller Überblick.</p>

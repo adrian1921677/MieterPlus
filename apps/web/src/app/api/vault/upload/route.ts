@@ -55,21 +55,46 @@ export async function POST(request: NextRequest) {
 
   const service = createSupabaseServiceClient();
 
-  // Property gehört dem Vermieter?
+  // Property gehört dem Vermieter ODER User ist Hausverwaltung mit 'vault'-Recht?
   const { data: property } = await service
     .from('properties')
     .select('id, owner_id')
     .eq('id', propertyId)
     .single();
-  if (!property || (guard.user.role !== 'admin' && property.owner_id !== guard.user.id)) {
+  if (!property) {
+    return NextResponse.json({ error: { message: 'Immobilie nicht gefunden' } }, { status: 404 });
+  }
+
+  const isOwner = property.owner_id === guard.user.id;
+  let isManagerWithVault = false;
+  if (!isOwner && guard.user.role !== 'admin') {
+    const { data: mgr } = await service
+      .from('property_managers')
+      .select('permissions, property_manager_properties!inner(property_id)')
+      .eq('manager_id', guard.user.id)
+      .eq('status', 'active')
+      .eq('property_manager_properties.property_id', propertyId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    isManagerWithVault = (mgr ?? []).some((m: any) => m.permissions?.vault === true);
+  }
+  if (!isOwner && !isManagerWithVault && guard.user.role !== 'admin') {
     return NextResponse.json(
       { error: { message: 'Keine Berechtigung für diese Immobilie' } },
       { status: 403 },
     );
   }
 
-  // Quota-Check: Dokumente über alle Immobilien dieses Vermieters
+  // Quota-Check: zählt zum Kontingent des EIGENTÜMERS
   const ownerId = property.owner_id;
+  const { data: ownerProfile } = await service
+    .from('profiles')
+    .select('subscription_plan, subscription_valid_until')
+    .eq('id', ownerId)
+    .single();
+  const ownerPremium =
+    ownerProfile?.subscription_plan === 'premium' &&
+    (!ownerProfile.subscription_valid_until ||
+      new Date(ownerProfile.subscription_valid_until).getTime() > Date.now());
   const { data: ownerProps } = await service
     .from('properties')
     .select('id')
@@ -80,15 +105,15 @@ export async function POST(request: NextRequest) {
     .select('id', { count: 'exact', head: true })
     .in('property_id', propIds.length ? propIds : [propertyId]);
 
-  const quota = guard.user.isPremium ? VAULT_QUOTA.premium : VAULT_QUOTA.basic;
+  const quota = ownerPremium ? VAULT_QUOTA.premium : VAULT_QUOTA.basic;
   if (guard.user.role !== 'admin' && (count ?? 0) >= quota) {
     return NextResponse.json(
       {
         error: {
           code: 'quota_exceeded',
-          message: guard.user.isPremium
-            ? `Dein Premium-Kontingent von ${quota} Dokumenten ist erreicht.`
-            : `Dein Basic-Kontingent von ${quota} Dokumenten ist erreicht. Mit Premium erhältst du ${VAULT_QUOTA.premium} Dokumente.`,
+          message: ownerPremium
+            ? `Das Premium-Kontingent von ${quota} Dokumenten ist erreicht.`
+            : `Das Basic-Kontingent von ${quota} Dokumenten ist erreicht. Mit Premium sind ${VAULT_QUOTA.premium} Dokumente möglich.`,
         },
       },
       { status: 403 },

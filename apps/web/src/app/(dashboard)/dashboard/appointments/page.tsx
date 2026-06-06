@@ -5,6 +5,8 @@ import {
   type AppointmentPurpose,
 } from '@mieterplus/shared';
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
+import { getSubscription } from '@/lib/subscription';
+import { getPropertyAccess, propertyIdsWithPermission } from '@/lib/access';
 import { PremiumGate } from '@/components/premium-gate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppointmentManager } from './appointment-manager';
@@ -12,26 +14,35 @@ import { AppointmentManager } from './appointment-manager';
 export const metadata = { title: 'Terminplaner' };
 
 export default async function AppointmentsPage() {
-  return (
-    <PremiumGate feature="Terminplaner">
-      <AppointmentsInner />
-    </PremiumGate>
-  );
-}
-
-async function AppointmentsInner() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
   const service = createSupabaseServiceClient();
+  const access = await getPropertyAccess(service, user.id);
+  const sub = await getSubscription(supabase, user.id);
 
+  // Zugriff: Premium-Eigentümer ODER Admin ODER Hausverwaltung mit 'appointments'
+  const manageableIds = propertyIdsWithPermission(access, 'appointments');
+  const hasManagedAppointments = Object.values(access.managedPerms).some((p) => p.appointments);
+  const allowed = profile?.role === 'admin' || sub.isPremium || hasManagedAppointments;
+
+  if (!allowed) {
+    return <PremiumGate feature="Terminplaner">{null}</PremiumGate>;
+  }
+
+  return <AppointmentsInner manageableIds={manageableIds} />;
+}
+
+async function AppointmentsInner({ manageableIds }: { manageableIds: string[] }) {
+  const service = createSupabaseServiceClient();
   const { data: properties } = await service
     .from('properties')
     .select('id, street, house_number, postal_code, city')
-    .eq('owner_id', user.id)
+    .in('id', manageableIds.length ? manageableIds : ['00000000-0000-0000-0000-000000000000'])
     .order('created_at', { ascending: false });
 
   const propIds = (properties ?? []).map((p) => p.id);

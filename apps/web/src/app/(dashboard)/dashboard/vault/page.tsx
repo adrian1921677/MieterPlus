@@ -8,6 +8,7 @@ import {
 } from '@mieterplus/shared';
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
 import { getSubscription } from '@/lib/subscription';
+import { getPropertyAccess, propertyIdsWithPermission } from '@/lib/access';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { VaultManager } from './vault-manager';
 
@@ -21,21 +22,26 @@ export default async function VaultPage() {
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (profile?.role !== 'landlord' && profile?.role !== 'admin') redirect('/dashboard');
+
+  const service = createSupabaseServiceClient();
+  const access = await getPropertyAccess(service, user.id);
+
+  // Nur Vermieter (mit eigenen Objekten) oder Hausverwaltung (mit vault-Recht) bzw. Admin
+  const uploadableIds = propertyIdsWithPermission(access, 'vault');
+  if (profile?.role !== 'admin' && access.allIds.length === 0) redirect('/dashboard');
 
   const sub = await getSubscription(supabase, user.id);
   const quota = sub.isPremium ? VAULT_QUOTA.premium : VAULT_QUOTA.basic;
 
-  const service = createSupabaseServiceClient();
-
-  // Immobilien des Vermieters (für Upload-Auswahl)
+  // Alle zugänglichen Immobilien (eigene + verwaltete) für Anzeige
   const { data: properties } = await service
     .from('properties')
     .select('id, street, house_number, postal_code, city')
-    .eq('owner_id', user.id)
+    .in('id', access.allIds.length ? access.allIds : ['00000000-0000-0000-0000-000000000000'])
     .order('created_at', { ascending: false });
 
-  const propIds = (properties ?? []).map((p) => p.id);
+  // Dokumente über alle zugänglichen Objekte
+  const propIds = access.allIds;
 
   // Dokumente + Lesebestätigungen
   const { data: docs } = propIds.length
@@ -49,12 +55,22 @@ export default async function VaultPage() {
         .order('created_at', { ascending: false })
     : { data: [] };
 
-  const usedCount = docs?.length ?? 0;
+  // Quota zählt nur eigene Dokumente (verwaltete Objekte zählen zum Kontingent des Eigentümers)
+  const ownedSet = new Set(access.ownedIds);
+  const usedCount = (docs ?? []).filter((d) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ownedSet.has((d as any).property_id),
+  ).length;
+  const showQuota = access.ownedIds.length > 0;
 
-  const propertyOptions = (properties ?? []).map((p) => ({
-    id: p.id,
-    label: `${p.street} ${p.house_number}, ${p.postal_code} ${p.city}`,
-  }));
+  // Upload nur in Objekte mit Berechtigung (eigene oder verwaltet mit 'vault')
+  const uploadSet = new Set(uploadableIds);
+  const propertyOptions = (properties ?? [])
+    .filter((p) => uploadSet.has(p.id))
+    .map((p) => ({
+      id: p.id,
+      label: `${p.street} ${p.house_number}, ${p.postal_code} ${p.city}`,
+    }));
 
   // Dokumente in serialisierbare Form bringen
   const documents = (docs ?? []).map((d) => {
@@ -76,7 +92,12 @@ export default async function VaultPage() {
     };
   });
 
-  const propLabelById = new Map(propertyOptions.map((p) => [p.id, p.label]));
+  const propLabelById = new Map(
+    (properties ?? []).map((p) => [
+      p.id,
+      `${p.street} ${p.house_number}, ${p.postal_code} ${p.city}`,
+    ]),
+  );
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -91,7 +112,8 @@ export default async function VaultPage() {
         </p>
       </div>
 
-      {/* Quota-Anzeige */}
+      {/* Quota-Anzeige (nur für Eigentümer) */}
+      {showQuota && (
       <Card>
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex-1">
@@ -121,6 +143,7 @@ export default async function VaultPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {propertyOptions.length === 0 ? (
         <Card>

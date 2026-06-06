@@ -62,6 +62,28 @@ export const APPOINTMENT_PURPOSE_LABELS_DE: Record<AppointmentPurpose, string> =
   other: 'Sonstiges',
 };
 
+// =============================================================================
+// Hausverwaltung — Verwalter-Berechtigungen
+// =============================================================================
+export const MANAGER_PERMISSIONS = ['requests', 'vault', 'appointments', 'properties'] as const;
+export type ManagerPermission = (typeof MANAGER_PERMISSIONS)[number];
+
+export const MANAGER_PERMISSION_LABELS_DE: Record<ManagerPermission, string> = {
+  requests: 'Mängel verwalten',
+  vault: 'Dokumenten-Tresor',
+  appointments: 'Termine verwalten',
+  properties: 'Immobilien & Mieter',
+};
+
+export const MANAGER_PERMISSION_DESCRIPTIONS_DE: Record<ManagerPermission, string> = {
+  requests: 'Mängelmeldungen sehen, bearbeiten und kommentieren.',
+  vault: 'Dokumente sehen und hochladen.',
+  appointments: 'Termin-Slots anlegen und Buchungen einsehen.',
+  properties: 'Wohneinheiten, Mieter-Codes und Übergabeprotokolle verwalten.',
+};
+
+export type ManagerPermissions = Partial<Record<ManagerPermission, boolean>>;
+
 export const REQUEST_CATEGORIES = [
   'heating',
   'plumbing',

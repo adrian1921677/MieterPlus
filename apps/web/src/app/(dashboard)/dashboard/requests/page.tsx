@@ -8,7 +8,8 @@ import {
   type RequestPriority,
   type RequestCategory,
 } from '@mieterplus/shared';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
+import { getPropertyAccess, propertyIdsWithPermission } from '@/lib/access';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { relativeTime } from '@/lib/utils';
@@ -35,7 +36,8 @@ export default async function RequestsPage({
     .single();
   const isAdmin = me?.role === 'admin';
 
-  let query = supabase
+  const service = createSupabaseServiceClient();
+  let query = (isAdmin ? supabase : service)
     .from('requests')
     .select(
       'id, title, category, priority, status, created_at, updated_at, tenancy_id, tenancies!inner(unit_id, units!inner(unit_label, property_id, properties!inner(street, house_number, owner_id, profiles:owner_id(full_name))))',
@@ -43,7 +45,12 @@ export default async function RequestsPage({
     .order('created_at', { ascending: false });
 
   if (!isAdmin) {
-    query = query.eq('tenancies.units.properties.owner_id', user.id);
+    const access = await getPropertyAccess(service, user.id);
+    const ids = propertyIdsWithPermission(access, 'requests');
+    query = query.in(
+      'tenancies.units.property_id',
+      ids.length ? ids : ['00000000-0000-0000-0000-000000000000'],
+    );
   }
   if (sp.status) query = query.eq('status', sp.status);
   if (sp.priority) query = query.eq('priority', sp.priority);

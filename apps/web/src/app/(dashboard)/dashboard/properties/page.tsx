@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
+import { getPropertyAccess } from '@/lib/access';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,13 +24,19 @@ export default async function PropertiesPage() {
     .single();
   const isAdmin = me?.role === 'admin';
 
-  let query = supabase
+  const service = createSupabaseServiceClient();
+  const access = isAdmin
+    ? null
+    : await getPropertyAccess(service, user.id);
+  const managedSet = new Set(access ? Object.keys(access.managedPerms) : []);
+
+  let query = (isAdmin ? supabase : service)
     .from('properties')
     .select(
       'id, street, house_number, postal_code, city, ownership_status, created_at, rejection_reason, owner_id, profiles:owner_id(full_name, identity_verified_at)',
     )
     .order('created_at', { ascending: false });
-  if (!isAdmin) query = query.eq('owner_id', user.id);
+  if (!isAdmin) query = query.in('id', access!.allIds.length ? access!.allIds : ['00000000-0000-0000-0000-000000000000']);
 
   const { data: properties } = await query;
 
@@ -84,11 +91,16 @@ export default async function PropertiesPage() {
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <CardTitle className="flex items-center gap-1.5 text-base">
+                      <CardTitle className="flex flex-wrap items-center gap-1.5 text-base">
                         <span>
                           {p.street} {p.house_number}
                         </span>
                         {p.ownership_status === 'verified' && <VerifiedBadge />}
+                        {managedSet.has(p.id) && (
+                          <Badge variant="outline" className="text-[10px]">
+                            Verwaltung
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription>
                         {p.postal_code} {p.city}

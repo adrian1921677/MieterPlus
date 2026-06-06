@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { MieterPlusBrand } from '@/components/brand';
 import { computeIsPremium } from '@/lib/subscription';
-import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, UserCheck, BadgeCheck, PlusCircle, UserCircle, Sparkles, FileSignature, FolderLock, CalendarClock } from 'lucide-react';
+import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, Users2, UserCheck, BadgeCheck, PlusCircle, UserCircle, Sparkles, FileSignature, FolderLock, CalendarClock } from 'lucide-react';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -26,12 +26,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const isPremium = computeIsPremium(profile.subscription_plan, profile.subscription_valid_until);
 
+  // Ist der User aktive Hausverwaltung? → bekommt Vermieter-Bereiche (gefiltert auf zugewiesene Objekte)
+  const { count: managerCount } = await supabase
+    .from('property_managers')
+    .select('id', { count: 'exact', head: true })
+    .eq('manager_id', user.id)
+    .eq('status', 'active');
+  const isManager = (managerCount ?? 0) > 0;
+
   const navItems: {
     href: string;
     label: string;
     icon: typeof Home;
     roles: string[];
     premium?: boolean;
+    managerVisible?: boolean;
   }[] = [
     // Mieter
     { href: '/dashboard', label: 'Übersicht', icon: Home, roles: ['tenant', 'landlord', 'admin'] },
@@ -77,12 +86,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
       label: 'Immobilien',
       icon: Building2,
       roles: ['landlord', 'admin'],
+      managerVisible: true,
     },
     {
       href: '/dashboard/requests',
       label: 'Mängel',
       icon: Wrench,
       roles: ['landlord', 'admin'],
+      managerVisible: true,
+    },
+    {
+      href: '/dashboard/managers',
+      label: 'Hausverwaltung',
+      icon: Users2,
+      roles: ['landlord'],
     },
     // Vermieter — Premium-Features
     {
@@ -97,6 +114,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       label: 'Dokumenten-Tresor',
       icon: FolderLock,
       roles: ['landlord', 'admin'],
+      managerVisible: true,
     },
     {
       href: '/dashboard/appointments',
@@ -104,6 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       icon: CalendarClock,
       roles: ['landlord', 'admin'],
       premium: true,
+      managerVisible: true,
     },
     // Admin
     {
@@ -124,7 +143,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       icon: UserCheck,
       roles: ['admin'],
     },
-  ].filter((item) => item.roles.includes(profile.role));
+  ].filter(
+    (item) => item.roles.includes(profile.role) || (item.managerVisible && isManager),
+  );
 
   return (
     <div className="flex min-h-screen bg-surface">
