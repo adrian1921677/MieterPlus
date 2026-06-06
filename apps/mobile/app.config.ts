@@ -1,7 +1,7 @@
 import type { ExpoConfig } from 'expo/config';
 
 const config: ExpoConfig = {
-  name: 'MieterPlus',
+  name: 'Mieter +',
   slug: 'mieterplus',
   version: '0.1.0',
   orientation: 'portrait',
@@ -12,7 +12,7 @@ const config: ExpoConfig = {
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#2563a8',
   },
   assetBundlePatterns: ['**/*'],
   ios: {
