@@ -221,15 +221,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </div>
           )}
 
-          {/* Upgrade-Hinweis für Basic-Vermieter */}
-          {profile.role === 'landlord' && !isPremium && (
+          {/* Farbiger Tarife-/Upgrade-Eintrag — dauerhaft für Vermieter */}
+          {profile.role === 'landlord' && (
             <Link
               href="/dashboard/upgrade"
               className="premium-card mb-3 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold text-white shadow-card transition-transform hover:scale-[1.02]"
             >
               <span className="relative z-10 flex items-center gap-1.5">
                 <Sparkles className="premium-spark h-3.5 w-3.5 text-amber-300" />
-                Auf Premium upgraden
+                {isPremium ? 'Tarife verwalten' : 'Auf Premium upgraden'}
               </span>
             </Link>
           )}
