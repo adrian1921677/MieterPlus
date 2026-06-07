@@ -96,7 +96,9 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
               Free
               {currentPlan === 'free' && <Badge variant="secondary">Aktiv</Badge>}
             </CardTitle>
-            <CardDescription>Für den Einstieg.</CardDescription>
+            <CardDescription>
+              Kostenlos starten — ideal für eine einzelne Wohnung.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-3xl font-black">
@@ -122,7 +124,9 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
               Plus
               {currentPlan === 'plus' && <Badge variant="success">Aktiv</Badge>}
             </CardTitle>
-            <CardDescription>Für private Vermieter.</CardDescription>
+            <CardDescription>
+              Das volle Werkzeug für den Vermieter-Alltag.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-3xl font-black">
@@ -152,7 +156,9 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
               Pro
               {currentPlan === 'pro' && <Badge variant="success">Aktiv</Badge>}
             </CardTitle>
-            <CardDescription>Für große Portfolios.</CardDescription>
+            <CardDescription>
+              Unbegrenzt verwalten — für Profis &amp; Teams.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="mb-4 text-3xl font-black">
