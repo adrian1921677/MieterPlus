@@ -43,6 +43,13 @@ const config: ExpoConfig = {
     'expo-router',
     'expo-secure-store',
     [
+      'expo-build-properties',
+      {
+        // Compose-Compiler 1.5.15 (in expo-modules-core 2.2.x) verlangt Kotlin 1.9.25
+        android: { kotlinVersion: '1.9.25' },
+      },
+    ],
+    [
       'expo-camera',
       {
         cameraPermission:
