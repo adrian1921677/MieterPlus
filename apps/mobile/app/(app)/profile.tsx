@@ -30,7 +30,7 @@ export default function ProfileScreen() {
 
       <View className="mt-auto p-6">
         <Text className="text-center text-xs text-gray-400">
-          MieterPlus · Eine App von ADB · v0.1.0
+          Mieter + · Eine App von ADB · v0.1.0
         </Text>
       </View>
     </View>

@@ -15,7 +15,7 @@ export default function AppLayout() {
     return (
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#2563eb',
+          tabBarActiveTintColor: '#2563a8',
           headerStyle: { backgroundColor: '#fff' },
         }}
       >
@@ -47,7 +47,7 @@ export default function AppLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2563eb',
+        tabBarActiveTintColor: '#2563a8',
         headerStyle: { backgroundColor: '#fff' },
       }}
     >

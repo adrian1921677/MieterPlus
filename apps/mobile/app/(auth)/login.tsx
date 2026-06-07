@@ -44,7 +44,7 @@ export default function LoginScreen() {
           <View className="mb-3 rounded bg-primary px-3 py-1">
             <Text className="font-bold text-white">ADB</Text>
           </View>
-          <Text className="text-3xl font-bold text-gray-900">MieterPlus</Text>
+          <Text className="text-3xl font-bold text-gray-900">Mieter +</Text>
           <Text className="mt-2 text-gray-500">Willkommen zurück</Text>
         </View>
 

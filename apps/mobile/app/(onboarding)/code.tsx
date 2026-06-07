@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { TENANT_INVITATION_CODE_LENGTH } from '@mieterplus/shared';
@@ -28,8 +29,10 @@ export default function CodeScreen() {
     try {
       const { data: sess } = await supabase.auth.getSession();
       if (!sess.session) throw new Error('Nicht angemeldet');
-      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/verify-tenant-code`;
-      const res = await fetch(url, {
+      const webApiUrl =
+        (Constants.expoConfig?.extra?.webApiUrl as string | undefined) ??
+        'https://mieterplus.abdullahu.de';
+      const res = await fetch(`${webApiUrl}/api/tenant/verify-code`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,7 +96,7 @@ export default function CodeScreen() {
         </Pressable>
 
         <Text className="mt-6 text-center text-xs text-gray-500">
-          Noch keinen Code? Frage deinen Vermieter — er kann ihn in MieterPlus für deine
+          Noch keinen Code? Frage deinen Vermieter — er kann ihn in Mieter + für deine
           Wohnung generieren.
         </Text>
       </ScrollView>

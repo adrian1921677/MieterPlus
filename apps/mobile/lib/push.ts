@@ -29,7 +29,7 @@ export async function registerPushToken(userId: string): Promise<string | null> 
       name: 'Allgemein',
       importance: Notifications.AndroidImportance.DEFAULT,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#2563eb',
+      lightColor: '#2563a8',
     });
   }
 

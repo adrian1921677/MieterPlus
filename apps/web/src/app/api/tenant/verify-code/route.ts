@@ -19,18 +19,40 @@ async function hashIp(ipHeader: string | null): Promise<string | null> {
     .join('');
 }
 
-export async function POST(request: NextRequest) {
-  // Auth-Check
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return err('Unauthorized', 401);
+// CORS für die Mobile-App (Bearer-Token-Aufrufe)
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
+};
 
-  const { data: profile } = await supabase
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
+export async function POST(request: NextRequest) {
+  const service = createSupabaseServiceClient();
+
+  // Auth: entweder Cookie-Session (Web) ODER Bearer-Token (Mobile-App)
+  const authHeader = request.headers.get('authorization');
+  let userId: string | null = null;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const { data } = await service.auth.getUser(token);
+    userId = data.user?.id ?? null;
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  }
+  if (!userId) return err('Unauthorized', 401);
+
+  const { data: profile } = await service
     .from('profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single();
   if (profile?.role !== 'tenant') return err('Mieter-Rolle erforderlich', 403);
 
@@ -39,7 +61,6 @@ export async function POST(request: NextRequest) {
   const rawCode = typeof body?.code === 'string' ? body.code.trim().toUpperCase() : '';
   if (!CODE_RE.test(rawCode)) return err('Ungültiges Code-Format', 400);
 
-  const service = createSupabaseServiceClient();
   const ipHash = await hashIp(request.headers.get('x-forwarded-for'));
 
   // Rate-Limit: max. 5 Versuche pro Stunde pro User
@@ -47,7 +68,7 @@ export async function POST(request: NextRequest) {
   const { count: attemptCount } = await service
     .from('invitation_attempts')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .gt('created_at', sinceIso);
 
   if ((attemptCount ?? 0) >= MAX_ATTEMPTS_PER_HOUR) {
@@ -56,7 +77,7 @@ export async function POST(request: NextRequest) {
 
   const logAttempt = async (success: boolean) => {
     await service.from('invitation_attempts').insert({
-      user_id: user.id,
+      user_id: userId,
       ip_hash: ipHash,
       code_tried: rawCode.slice(0, 4) + '********',
       success,
@@ -91,7 +112,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await service
     .from('tenancies')
     .select('id')
-    .eq('tenant_id', user.id)
+    .eq('tenant_id', userId)
     .eq('unit_id', invitation.unit_id)
     .is('ended_at', null)
     .maybeSingle();
@@ -104,7 +125,7 @@ export async function POST(request: NextRequest) {
   // Tenancy erstellen
   const { data: tenancy, error: tErr } = await service
     .from('tenancies')
-    .insert({ tenant_id: user.id, unit_id: invitation.unit_id })
+    .insert({ tenant_id: userId, unit_id: invitation.unit_id })
     .select('id, unit_id, started_at')
     .single();
 
@@ -116,7 +137,7 @@ export async function POST(request: NextRequest) {
   // Invitation als used_at markieren
   const { error: useErr } = await service
     .from('tenant_invitations')
-    .update({ used_at: new Date().toISOString(), used_by: user.id })
+    .update({ used_at: new Date().toISOString(), used_by: userId })
     .eq('id', invitation.id)
     .is('used_at', null);
 
