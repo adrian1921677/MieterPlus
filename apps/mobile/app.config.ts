@@ -3,6 +3,7 @@ import type { ExpoConfig } from 'expo/config';
 const config: ExpoConfig = {
   name: 'Mieter +',
   slug: 'mieterplus',
+  owner: 'callmealbo',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -67,7 +68,8 @@ const config: ExpoConfig = {
     typedRoutes: true,
   },
   extra: {
-    eas: { projectId: '00000000-0000-0000-0000-000000000000' },
+    // projectId wird von `eas init` gesetzt (hier per ENV überschreibbar)
+    eas: { projectId: process.env.EAS_PROJECT_ID },
     // Fallback-Werte, falls EXPO_PUBLIC_* nicht gesetzt sind.
     // Anon-Key ist publishable (RLS schützt die Daten) — darf im Build sein.
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://qvqnklvuydludsyewomu.supabase.co',
