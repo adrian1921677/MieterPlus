@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { FolderLock, Sparkles } from 'lucide-react';
 import {
-  VAULT_QUOTA,
+  PLAN_LIMITS,
   VAULT_DOCUMENT_TYPE_LABELS_DE,
   type VaultDocumentType,
 } from '@mieterplus/shared';
@@ -31,7 +31,7 @@ export default async function VaultPage() {
   if (profile?.role !== 'admin' && access.allIds.length === 0) redirect('/dashboard');
 
   const sub = await getSubscription(supabase, user.id);
-  const quota = sub.isPremium ? VAULT_QUOTA.premium : VAULT_QUOTA.basic;
+  const quota = PLAN_LIMITS[sub.plan].vaultDocs;
 
   // Alle zugänglichen Immobilien (eigene + verwaltete) für Anzeige
   const { data: properties } = await service
@@ -122,7 +122,7 @@ export default async function VaultPage() {
                 {usedCount} / {quota} Dokumenten belegt
               </span>
               <span className="text-xs text-muted-foreground">
-                {sub.isPremium ? 'Premium-Kontingent' : 'Basic-Kontingent'}
+                {sub.plan === 'free' ? 'Free-Kontingent' : sub.plan === 'plus' ? 'Plus-Kontingent' : 'Pro-Kontingent'}
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
@@ -132,13 +132,13 @@ export default async function VaultPage() {
               />
             </div>
           </div>
-          {!sub.isPremium && (
+          {sub.plan !== 'pro' && (
             <Link
               href="/dashboard/upgrade"
               className="inline-flex items-center gap-1.5 rounded-md bg-[#2563a8] px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-[#1d4f8c]"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Mehr mit Premium ({VAULT_QUOTA.premium})
+              Mehr mit Plus / Pro
             </Link>
           )}
         </CardContent>

@@ -5,24 +5,53 @@ export const ROLES = ['tenant', 'landlord', 'admin'] as const;
 export type Role = (typeof ROLES)[number];
 
 // =============================================================================
-// Abo-Modell (Premium für Vermieter)
+// Abo-Modell — 3 Stufen: free / plus / pro
 // =============================================================================
-export const SUBSCRIPTION_PLANS = ['basic', 'premium'] as const;
+export const SUBSCRIPTION_PLANS = ['free', 'plus', 'pro'] as const;
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
 
 export const SUBSCRIPTION_PLAN_LABELS_DE: Record<SubscriptionPlan, string> = {
-  basic: 'Basic',
-  premium: 'Premium',
+  free: 'Free',
+  plus: 'Plus',
+  pro: 'Pro',
 };
 
-// Feature-Keys für Premium-Gating (zentral, damit Frontend + API gleich sprechen)
-export const PREMIUM_FEATURES = ['handover', 'vault_extended', 'appointments'] as const;
+/** Bezahlte Pläne (= "Premium"-Zugang). */
+export function isPaidPlan(plan: SubscriptionPlan): boolean {
+  return plan === 'plus' || plan === 'pro';
+}
+
+// Preise (Brutto inkl. MwSt), Stripe rechnet ab
+export const PLAN_PRICES: Record<'plus' | 'pro', { monthly: number; yearly: number }> = {
+  plus: { monthly: 9.9, yearly: 99 },
+  pro: { monthly: 24.9, yearly: 249 },
+};
+
+// Limits & Feature-Zugang pro Stufe. null = unbegrenzt.
+export type PlanLimits = {
+  properties: number | null;
+  units: number | null;
+  vaultDocs: number;
+  managers: number | null;
+  handover: boolean;
+  appointments: boolean;
+};
+
+export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
+  free: { properties: 1, units: 3, vaultDocs: 3, managers: 0, handover: false, appointments: false },
+  plus: { properties: 10, units: 30, vaultDocs: 50, managers: 1, handover: true, appointments: true },
+  pro: { properties: null, units: null, vaultDocs: 100000, managers: null, handover: true, appointments: true },
+};
+
+// Feature-Keys für Gating (zentral)
+export const PREMIUM_FEATURES = ['handover', 'appointments'] as const;
 export type PremiumFeature = (typeof PREMIUM_FEATURES)[number];
 
-// Dokumenten-Tresor Kontingent pro Plan
+// Dokumenten-Tresor Kontingent pro Plan (Convenience aus PLAN_LIMITS)
 export const VAULT_QUOTA: Record<SubscriptionPlan, number> = {
-  basic: 5,
-  premium: 200,
+  free: PLAN_LIMITS.free.vaultDocs,
+  plus: PLAN_LIMITS.plus.vaultDocs,
+  pro: PLAN_LIMITS.pro.vaultDocs,
 };
 
 export const VAULT_DOCUMENT_TYPES = [

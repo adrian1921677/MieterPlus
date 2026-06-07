@@ -149,7 +149,11 @@ export default async function AdminUsersPage({
                       {p.role === 'landlord' && (
                         <SubscriptionToggle
                           userId={p.id}
-                          initialPlan={p.subscription_plan === 'premium' ? 'premium' : 'basic'}
+                          initialPlan={
+                            p.subscription_plan === 'plus' || p.subscription_plan === 'pro'
+                              ? p.subscription_plan
+                              : 'free'
+                          }
                           validUntil={p.subscription_valid_until ?? null}
                         />
                       )}

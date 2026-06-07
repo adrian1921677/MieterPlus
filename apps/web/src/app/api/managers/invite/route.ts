@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { MANAGER_PERMISSIONS } from '@mieterplus/shared';
+import { MANAGER_PERMISSIONS, PLAN_LIMITS, type SubscriptionPlan } from '@mieterplus/shared';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { requireRole } from '@/lib/guards';
 
@@ -42,6 +42,44 @@ export async function POST(request: NextRequest) {
   }
 
   const service = createSupabaseServiceClient();
+
+  // Plan-Limit für Hausverwaltungen prüfen
+  if (guard.user.role !== 'admin') {
+    const { data: ownerProfile } = await service
+      .from('profiles')
+      .select('subscription_plan, subscription_valid_until')
+      .eq('id', guard.user.id)
+      .single();
+    const planValid =
+      !ownerProfile?.subscription_valid_until ||
+      new Date(ownerProfile.subscription_valid_until).getTime() > Date.now();
+    const plan: SubscriptionPlan =
+      planValid && (ownerProfile?.subscription_plan === 'plus' || ownerProfile?.subscription_plan === 'pro')
+        ? ownerProfile.subscription_plan
+        : 'free';
+    const limit = PLAN_LIMITS[plan].managers; // null = unbegrenzt
+    if (limit !== null) {
+      const { count } = await service
+        .from('property_managers')
+        .select('id', { count: 'exact', head: true })
+        .eq('owner_id', guard.user.id)
+        .neq('status', 'revoked');
+      if ((count ?? 0) >= limit) {
+        return NextResponse.json(
+          {
+            error: {
+              code: 'manager_limit',
+              message:
+                limit === 0
+                  ? 'Hausverwaltungen sind ab dem Plus-Tarif verfügbar. Bitte upgrade dein Abo.'
+                  : `Dein Tarif erlaubt maximal ${limit} Hausverwaltung(en). Mit Pro sind es unbegrenzt.`,
+            },
+          },
+          { status: 403 },
+        );
+      }
+    }
+  }
 
   // Sicherstellen, dass alle Properties dem Eigentümer gehören
   const { data: ownProps } = await service

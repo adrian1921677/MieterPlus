@@ -22,17 +22,18 @@ export async function getSubscription(
     .eq('id', userId)
     .single();
 
-  const plan: SubscriptionPlan = data?.subscription_plan === 'premium' ? 'premium' : 'basic';
+  const raw = data?.subscription_plan;
+  const plan: SubscriptionPlan = raw === 'plus' || raw === 'pro' ? raw : 'free';
   const validUntil: string | null = data?.subscription_valid_until ?? null;
   return { plan, validUntil, isPremium: computeIsPremium(plan, validUntil) };
 }
 
-/** Reine Berechnung, ob ein Plan + Ablaufdatum aktuell Premium bedeutet. */
+/** Reine Berechnung, ob ein bezahlter Plan (plus/pro) aktuell aktiv ist. */
 export function computeIsPremium(
   plan: string | null | undefined,
   validUntil: string | null | undefined,
 ): boolean {
-  if (plan !== 'premium') return false;
+  if (plan !== 'plus' && plan !== 'pro') return false;
   if (!validUntil) return true;
   return new Date(validUntil).getTime() > Date.now();
 }

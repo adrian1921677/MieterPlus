@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
   if (typeof userId !== 'string' || !/^[0-9a-f-]{36}$/i.test(userId)) {
     return NextResponse.json({ error: { message: 'user_id (uuid) erforderlich' } }, { status: 400 });
   }
-  if (plan !== 'basic' && plan !== 'premium') {
+  if (plan !== 'free' && plan !== 'plus' && plan !== 'pro') {
     return NextResponse.json(
-      { error: { message: "plan muss 'basic' oder 'premium' sein" } },
+      { error: { message: "plan muss 'free', 'plus' oder 'pro' sein" } },
       { status: 400 },
     );
   }
@@ -41,9 +41,9 @@ export async function POST(request: NextRequest) {
   }
 
   const validUntil =
-    plan === 'premium'
-      ? new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString()
-      : null;
+    plan === 'free'
+      ? null
+      : new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const { error: updErr } = await service
     .from('profiles')
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
   await service
     .rpc('log_audit', {
-      p_action: plan === 'premium' ? 'subscription.granted' : 'subscription.revoked',
+      p_action: plan === 'free' ? 'subscription.revoked' : 'subscription.granted',
       p_entity_type: 'profile',
       p_entity_id: userId,
       p_payload: { plan, valid_until: validUntil, by: guard.user.id },

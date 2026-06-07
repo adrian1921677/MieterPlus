@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   // Helper: Plan-Status setzen anhand Stripe-Customer-ID
   async function applyPlan(
     customerId: string,
-    plan: 'basic' | 'premium',
+    plan: 'free' | 'plus' | 'pro',
     validUntil: string | null,
     subscriptionId: string | null,
   ) {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         subscription_plan: plan,
         subscription_valid_until: validUntil,
         stripe_subscription_id: subscriptionId,
-        subscription_auto_renew: plan === 'premium',
+        subscription_auto_renew: plan !== 'free',
       })
       .eq('id', profile.id);
 
@@ -84,17 +84,15 @@ export async function POST(request: NextRequest) {
       const validUntil = sub.items?.data?.[0]?.current_period_end
         ? new Date(sub.items.data[0].current_period_end * 1000).toISOString()
         : null;
-      await applyPlan(
-        String(sub.customer),
-        active ? 'premium' : 'basic',
-        validUntil,
-        sub.id,
-      );
+      // Plan aus der Subscription-Metadata (beim Checkout gesetzt)
+      const metaPlan = sub.metadata?.plan;
+      const plan = metaPlan === 'pro' ? 'pro' : metaPlan === 'plus' ? 'plus' : 'plus';
+      await applyPlan(String(sub.customer), active ? plan : 'free', validUntil, sub.id);
       break;
     }
     case 'customer.subscription.deleted': {
       const sub = event.data.object as import('stripe').Stripe.Subscription;
-      await applyPlan(String(sub.customer), 'basic', null, null);
+      await applyPlan(String(sub.customer), 'free', null, null);
       break;
     }
     default:

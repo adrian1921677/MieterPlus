@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import {
   VAULT_DOCUMENT_TYPES,
-  VAULT_QUOTA,
+  PLAN_LIMITS,
   VAULT_ALLOWED_MIME_TYPES,
   VAULT_MAX_FILE_SIZE_BYTES,
+  type SubscriptionPlan,
 } from '@mieterplus/shared';
 import { createSupabaseServiceClient } from '@/lib/supabase/server';
 import { requireRole } from '@/lib/guards';
@@ -91,10 +92,13 @@ export async function POST(request: NextRequest) {
     .select('subscription_plan, subscription_valid_until')
     .eq('id', ownerId)
     .single();
-  const ownerPremium =
-    ownerProfile?.subscription_plan === 'premium' &&
-    (!ownerProfile.subscription_valid_until ||
-      new Date(ownerProfile.subscription_valid_until).getTime() > Date.now());
+  const planValid =
+    !ownerProfile?.subscription_valid_until ||
+    new Date(ownerProfile.subscription_valid_until).getTime() > Date.now();
+  const ownerPlan: SubscriptionPlan =
+    planValid && (ownerProfile?.subscription_plan === 'plus' || ownerProfile?.subscription_plan === 'pro')
+      ? ownerProfile.subscription_plan
+      : 'free';
   const { data: ownerProps } = await service
     .from('properties')
     .select('id')
@@ -105,15 +109,16 @@ export async function POST(request: NextRequest) {
     .select('id', { count: 'exact', head: true })
     .in('property_id', propIds.length ? propIds : [propertyId]);
 
-  const quota = ownerPremium ? VAULT_QUOTA.premium : VAULT_QUOTA.basic;
+  const quota = PLAN_LIMITS[ownerPlan].vaultDocs;
   if (guard.user.role !== 'admin' && (count ?? 0) >= quota) {
     return NextResponse.json(
       {
         error: {
           code: 'quota_exceeded',
-          message: ownerPremium
-            ? `Das Premium-Kontingent von ${quota} Dokumenten ist erreicht.`
-            : `Das Basic-Kontingent von ${quota} Dokumenten ist erreicht. Mit Premium sind ${VAULT_QUOTA.premium} Dokumente möglich.`,
+          message:
+            ownerPlan === 'free'
+              ? `Das Free-Kontingent von ${quota} Dokumenten ist erreicht. Mit Plus sind ${PLAN_LIMITS.plus.vaultDocs} möglich.`
+              : `Das Dokumenten-Kontingent (${quota}) ist erreicht.`,
         },
       },
       { status: 403 },

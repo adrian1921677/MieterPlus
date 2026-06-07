@@ -2,29 +2,26 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Spinner } from '@/components/loading';
+import { SUBSCRIPTION_PLANS, SUBSCRIPTION_PLAN_LABELS_DE, type SubscriptionPlan } from '@mieterplus/shared';
 
 /**
- * Admin-Toggle: gewährt/entzieht einem Vermieter Premium (manuelle
- * Freischaltung, solange Stripe nicht live ist).
+ * Admin setzt den Abo-Plan eines Vermieters (manuelle Freischaltung,
+ * solange/falls Stripe nicht genutzt wird).
  */
 export function SubscriptionToggle({
   userId,
   initialPlan,
-  validUntil,
 }: {
   userId: string;
-  initialPlan: 'basic' | 'premium';
-  validUntil: string | null;
+  initialPlan: SubscriptionPlan;
+  validUntil?: string | null;
 }) {
   const router = useRouter();
-  const [plan, setPlan] = useState(initialPlan);
+  const [plan, setPlan] = useState<SubscriptionPlan>(initialPlan);
   const [loading, setLoading] = useState(false);
 
-  const toggle = async () => {
-    const next = plan === 'premium' ? 'basic' : 'premium';
+  const change = async (next: SubscriptionPlan) => {
+    if (next === plan) return;
     setLoading(true);
     try {
       const res = await fetch('/api/admin/set-subscription', {
@@ -41,33 +38,21 @@ export function SubscriptionToggle({
     }
   };
 
-  const isPremium = plan === 'premium';
-
   return (
-    <button
-      type="button"
-      onClick={toggle}
+    <select
+      value={plan}
       disabled={loading}
-      title={
-        isPremium
-          ? `Premium aktiv${validUntil ? ' bis ' + new Date(validUntil).toLocaleDateString('de-DE') : ''} — klicken zum Entziehen`
-          : 'Premium gewähren (12 Monate)'
-      }
-      className="transition-opacity hover:opacity-80 disabled:opacity-50"
+      onChange={(e) => change(e.target.value as SubscriptionPlan)}
+      title="Abo-Plan setzen"
+      className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+        plan === 'free' ? 'border-zinc-200 text-zinc-600' : 'border-[#2563a8] bg-[#eff6ff] text-[#2563a8]'
+      }`}
     >
-      {loading ? (
-        <Badge variant="outline" className="gap-1">
-          <Spinner className="h-3 w-3" /> …
-        </Badge>
-      ) : isPremium ? (
-        <Badge className="gap-1 bg-[#2563a8] text-white">
-          <Sparkles className="h-3 w-3" /> Premium
-        </Badge>
-      ) : (
-        <Badge variant="outline" className="gap-1 border-dashed">
-          <Sparkles className="h-3 w-3" /> Premium geben
-        </Badge>
-      )}
-    </button>
+      {SUBSCRIPTION_PLANS.map((p) => (
+        <option key={p} value={p}>
+          {SUBSCRIPTION_PLAN_LABELS_DE[p]}
+        </option>
+      ))}
+    </select>
   );
 }
