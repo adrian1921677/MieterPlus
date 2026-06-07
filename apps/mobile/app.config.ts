@@ -68,8 +68,7 @@ const config: ExpoConfig = {
     typedRoutes: true,
   },
   extra: {
-    // projectId wird von `eas init` gesetzt (hier per ENV überschreibbar)
-    eas: { projectId: process.env.EAS_PROJECT_ID },
+    eas: { projectId: process.env.EAS_PROJECT_ID ?? 'c7374b1a-770e-4e67-b605-ce1546da30db' },
     // Fallback-Werte, falls EXPO_PUBLIC_* nicht gesetzt sind.
     // Anon-Key ist publishable (RLS schützt die Daten) — darf im Build sein.
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://qvqnklvuydludsyewomu.supabase.co',
