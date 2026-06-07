@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getSubscription } from '@/lib/subscription';
 import { Badge } from '@/components/ui/badge';
 import { UpgradePlans } from './upgrade-plans';
+import { CancelSubscription } from './cancel-subscription';
 
 export const metadata = { title: 'Tarife' };
 
@@ -37,6 +38,8 @@ export default async function UpgradePage() {
       </div>
 
       <UpgradePlans currentPlan={sub.plan} />
+
+      {sub.isPremium && <CancelSubscription validUntil={sub.validUntil} />}
 
       <p className="text-center text-xs text-muted-foreground">
         Preise inkl. MwSt. Die Online-Bezahlung wird in Kürze freigeschaltet — bis dahin aktiviert
