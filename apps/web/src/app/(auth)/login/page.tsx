@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoginForm } from './login-form';
 import { GoogleAuthButton } from '@/components/google-auth-button';
-import { AppleAuthButton } from '@/components/apple-auth-button';
 
 export const metadata = { title: 'Anmelden' };
 
@@ -12,13 +11,10 @@ export default function LoginPage() {
     <Card>
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl">Willkommen zurück</CardTitle>
-        <CardDescription>Melde dich mit Google, Apple oder per E-Mail an.</CardDescription>
+        <CardDescription>Melde dich mit Google oder per E-Mail an.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="space-y-2">
-          <GoogleAuthButton label="Mit Google anmelden" />
-          <AppleAuthButton label="Mit Apple anmelden" />
-        </div>
+        <GoogleAuthButton label="Mit Google anmelden" />
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
