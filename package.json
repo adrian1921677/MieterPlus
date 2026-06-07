@@ -35,7 +35,7 @@
   "overrides": {
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
-    "ajv": "^8.17.1",
+    "ajv": "$ajv",
     "eslint": {
       "ajv": "^6.12.6"
     },
