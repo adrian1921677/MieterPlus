@@ -2,13 +2,15 @@
 -- Umstellung auf 3 Abo-Stufen: free / plus / pro
 -- =============================================================================
 
+-- WICHTIG: erst die alte Check-Constraint entfernen, sonst blockiert sie das UPDATE
+alter table public.profiles drop constraint if exists profiles_subscription_plan_check;
+
 -- Bestehende Werte migrieren (basic→free, premium→pro)
 update public.profiles set subscription_plan = 'pro'  where subscription_plan = 'premium';
 update public.profiles set subscription_plan = 'free' where subscription_plan = 'basic' or subscription_plan is null;
 
--- Default + Check anpassen
+-- Default + neue Check-Constraint
 alter table public.profiles alter column subscription_plan set default 'free';
-alter table public.profiles drop constraint if exists profiles_subscription_plan_check;
 alter table public.profiles
   add constraint profiles_subscription_plan_check
   check (subscription_plan in ('free', 'plus', 'pro'));
