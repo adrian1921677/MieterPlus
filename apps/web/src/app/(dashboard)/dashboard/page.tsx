@@ -59,11 +59,13 @@ export default async function DashboardPage() {
       : { data: [] };
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-up">
         <PendingManagerInvites />
         <div>
-          <h1 className="text-2xl font-bold">Hallo {profile.full_name}!</h1>
-          <p className="text-muted-foreground">Schön, dass du da bist.</p>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Hallo <span className="text-accent-adb">{profile.full_name}</span>!
+          </h1>
+          <p className="mt-1 text-muted-foreground">Schön, dass du da bist.</p>
         </div>
 
         {pendingHandovers && pendingHandovers.length > 0 && (
@@ -108,12 +110,12 @@ export default async function DashboardPage() {
               <StatCard
                 title="Meine Wohnungen"
                 value={verifiedTenancies.length}
-                icon={<Building2 className="h-4 w-4" />}
+                icon={<Building2 className="h-5 w-5" />}
               />
               <StatCard
                 title="Offene Mängel"
                 value={openMyRequests ?? 0}
-                icon={<Wrench className="h-4 w-4" />}
+                icon={<Wrench className="h-5 w-5" />}
                 href="/dashboard/my-requests"
               />
             </div>
@@ -179,9 +181,11 @@ export default async function DashboardPage() {
       .select('id', { count: 'exact', head: true })
       .eq('ownership_status', 'pending');
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-up">
         <PendingManagerInvites />
-        <h1 className="text-2xl font-bold">Hallo {profile.full_name}</h1>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          Hallo <span className="text-accent-adb">{profile.full_name}</span>
+        </h1>
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -263,36 +267,38 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-up">
       <PendingManagerInvites />
       <div>
-        <h1 className="text-2xl font-bold">Willkommen, {profile.full_name}</h1>
-        <p className="text-muted-foreground">Hier ist dein aktueller Überblick.</p>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          Willkommen, <span className="text-accent-adb">{profile.full_name}</span>
+        </h1>
+        <p className="mt-1 text-muted-foreground">Hier ist dein aktueller Überblick.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Immobilien"
           value={propertyCount ?? 0}
-          icon={<Building2 className="h-4 w-4" />}
+          icon={<Building2 className="h-5 w-5" />}
           href="/dashboard/properties"
         />
         <StatCard
           title="Davon ausstehend"
           value={pendingPropCount ?? 0}
-          icon={<ShieldCheck className="h-4 w-4" />}
+          icon={<ShieldCheck className="h-5 w-5" />}
           variant={(pendingPropCount ?? 0) > 0 ? 'warning' : 'default'}
         />
         <StatCard
           title="Offene Mängel"
           value={openRequests ?? 0}
-          icon={<Wrench className="h-4 w-4" />}
+          icon={<Wrench className="h-5 w-5" />}
           href="/dashboard/requests"
         />
         <StatCard
           title="Dringende Mängel"
           value={urgentRequests ?? 0}
-          icon={<AlertTriangle className="h-4 w-4" />}
+          icon={<AlertTriangle className="h-5 w-5" />}
           href="/dashboard/requests?priority=urgent"
           variant={(urgentRequests ?? 0) > 0 ? 'destructive' : 'default'}
         />
@@ -389,7 +395,7 @@ function StatCard({
   value,
   icon,
   href,
-  variant,
+  variant = 'default',
 }: {
   title: string;
   value: number;
@@ -397,22 +403,36 @@ function StatCard({
   href?: string;
   variant?: 'default' | 'warning' | 'destructive';
 }) {
+  const styles = {
+    default: { chip: 'bg-accent-adb/10 text-accent-adb', ring: 'border-zinc-200' },
+    warning: { chip: 'bg-amber-100 text-amber-600', ring: 'border-amber-200' },
+    destructive: { chip: 'bg-red-100 text-red-600', ring: 'border-destructive/30' },
+  }[variant];
+
   const body = (
     <Card
-      className={
-        variant === 'destructive'
-          ? 'border-destructive/40'
-          : variant === 'warning'
-            ? 'border-amber-300'
-            : ''
-      }
+      className={`group relative overflow-hidden transition-all duration-200 ${styles.ring} ${
+        href ? 'hover:-translate-y-0.5 hover:shadow-card-hover' : ''
+      }`}
     >
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold">{value}</div>
+      {/* dezenter Akzent-Streifen oben */}
+      <span
+        className={`absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-accent-adb transition-transform duration-300 group-hover:scale-x-100 ${
+          variant === 'destructive' ? '!bg-destructive' : variant === 'warning' ? '!bg-amber-400' : ''
+        }`}
+      />
+      <CardContent className="flex items-center gap-4 p-5">
+        <div
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${styles.chip} transition-transform duration-200 group-hover:scale-105`}
+        >
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="text-3xl font-bold leading-none tracking-tight">{value}</div>
+          <div className="mt-1.5 truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {title}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

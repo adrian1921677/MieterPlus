@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { MieterPlusBrand } from '@/components/brand';
+import { DashboardSidebarNav } from '@/components/dashboard-sidebar-nav';
+import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
 import { computeIsPremium } from '@/lib/subscription';
-import { LogOut, Home, Building2, Wrench, ShieldCheck, Users, Users2, UserCheck, BadgeCheck, PlusCircle, UserCircle, Sparkles, FileSignature, FolderLock, CalendarClock } from 'lucide-react';
+import { DASHBOARD_NAV_ITEMS, type DashboardNavLink } from '@/lib/dashboard-nav';
+import { LogOut, Sparkles } from 'lucide-react';
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient();
@@ -34,147 +37,36 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('status', 'active');
   const isManager = (managerCount ?? 0) > 0;
 
-  const navItems: {
-    href: string;
-    label: string;
-    icon: typeof Home;
-    roles: string[];
-    premium?: boolean;
-    managerVisible?: boolean;
-  }[] = [
-    // Mieter
-    { href: '/dashboard', label: 'Übersicht', icon: Home, roles: ['tenant', 'landlord', 'admin'] },
-    {
-      href: '/dashboard/my-requests',
-      label: 'Meine Mängel',
-      icon: Wrench,
-      roles: ['tenant'],
-    },
-    {
-      href: '/dashboard/my-requests/new',
-      label: 'Mangel melden',
-      icon: PlusCircle,
-      roles: ['tenant'],
-    },
-    {
-      href: '/dashboard/my-documents',
-      label: 'Meine Dokumente',
-      icon: FolderLock,
-      roles: ['tenant'],
-    },
-    {
-      href: '/dashboard/my-appointments',
-      label: 'Termine',
-      icon: CalendarClock,
-      roles: ['tenant'],
-    },
-    {
-      href: '/dashboard/profile',
-      label: 'Mein Profil',
-      icon: UserCircle,
-      roles: ['tenant'],
-    },
-    // Vermieter
-    {
-      href: '/dashboard/verify-identity',
-      label: profile.identity_verified_at ? 'Identität ✓' : 'Identität verifizieren',
-      icon: BadgeCheck,
-      roles: ['landlord'],
-    },
-    {
-      href: '/dashboard/properties',
-      label: 'Immobilien',
-      icon: Building2,
-      roles: ['landlord', 'admin'],
-      managerVisible: true,
-    },
-    {
-      href: '/dashboard/requests',
-      label: 'Mängel',
-      icon: Wrench,
-      roles: ['landlord', 'admin'],
-      managerVisible: true,
-    },
-    {
-      href: '/dashboard/managers',
-      label: 'Hausverwaltung',
-      icon: Users2,
-      roles: ['landlord'],
-    },
-    // Vermieter — Premium-Features
-    {
-      href: '/dashboard/handover',
-      label: 'Übergabeprotokoll',
-      icon: FileSignature,
-      roles: ['landlord', 'admin'],
-      premium: true,
-    },
-    {
-      href: '/dashboard/vault',
-      label: 'Dokumenten-Tresor',
-      icon: FolderLock,
-      roles: ['landlord', 'admin'],
-      managerVisible: true,
-    },
-    {
-      href: '/dashboard/appointments',
-      label: 'Terminplaner',
-      icon: CalendarClock,
-      roles: ['landlord', 'admin'],
-      premium: true,
-      managerVisible: true,
-    },
-    // Admin
-    {
-      href: '/dashboard/admin/users',
-      label: 'Alle User',
-      icon: Users,
-      roles: ['admin'],
-    },
-    {
-      href: '/dashboard/admin/verifications',
-      label: 'Immobilien-Prüfung',
-      icon: ShieldCheck,
-      roles: ['admin'],
-    },
-    {
-      href: '/dashboard/admin/identity-verifications',
-      label: 'Identitäts-Prüfung',
-      icon: UserCheck,
-      roles: ['admin'],
-    },
-  ].filter(
+  // Navigations-Einträge filtern + dynamische Labels — serialisierbar für Client-Komponenten
+  const navLinks: DashboardNavLink[] = DASHBOARD_NAV_ITEMS.filter(
     (item) => item.roles.includes(profile.role) || (item.managerVisible && isManager),
-  );
+  ).map((item) => ({
+    href: item.href,
+    label:
+      item.href === '/dashboard/verify-identity'
+        ? profile.identity_verified_at
+          ? 'Identität ✓'
+          : 'Identität verifizieren'
+        : item.label,
+    iconName: item.iconName,
+    premium: item.premium,
+  }));
+
+  const validUntilLabel = profile.subscription_valid_until
+    ? new Date(profile.subscription_valid_until).toLocaleDateString('de-DE')
+    : null;
 
   return (
     <div className="flex min-h-screen bg-surface">
       <aside className="hidden w-64 border-r border-zinc-100 bg-white md:flex md:flex-col">
-        <div className="border-b border-zinc-100 p-6 flex justify-center">
+        <div className="flex justify-center border-b border-zinc-100 p-6">
           <Link href="/dashboard" aria-label="Mieter + Dashboard">
             <MieterPlusBrand size={104} layout="stacked" />
           </Link>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                {item.premium && !isPremium && profile.role !== 'admin' && (
-                  <span className="rounded bg-[#2563a8]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#2563a8]">
-                    Pro
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+
+        <DashboardSidebarNav items={navLinks} role={profile.role} isPremium={isPremium} />
+
         <div className="border-t p-4">
           {/* Premium-Kärtchen — edel mit Verlauf + Glanz */}
           {isPremium ? (
@@ -193,8 +85,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <div className="mt-0.5 text-[10px] text-white/70">
                   {profile.role === 'admin'
                     ? 'Administrator · Vollzugriff'
-                    : profile.subscription_valid_until
-                      ? `Aktiv bis ${new Date(profile.subscription_valid_until).toLocaleDateString('de-DE')}`
+                    : validUntilLabel
+                      ? `Aktiv bis ${validUntilLabel}`
                       : 'Aktiv'}
                 </div>
               </div>
@@ -213,9 +105,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
                     Administrator · Vollzugriff
                   </Badge>
                 ) : profile.role === 'landlord' ? (
-                  <Badge variant="info" className="text-[10px]">Vermieter</Badge>
+                  <Badge variant="info" className="text-[10px]">
+                    Vermieter
+                  </Badge>
                 ) : (
-                  <Badge variant="secondary" className="text-[10px]">Mieter</Badge>
+                  <Badge variant="secondary" className="text-[10px]">
+                    Mieter
+                  </Badge>
                 )}
               </div>
             </div>
@@ -244,16 +140,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       <main className="flex-1">
-        <header className="flex items-center justify-between border-b border-zinc-100 bg-white px-6 py-4 md:hidden">
-          <Link href="/dashboard" aria-label="Mieter + Dashboard">
-            <MieterPlusBrand size={52} layout="horizontal" />
-          </Link>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </form>
-        </header>
+        <DashboardMobileNav
+          items={navLinks}
+          role={profile.role}
+          isPremium={isPremium}
+          fullName={profile.full_name}
+          identityVerified={!!profile.identity_verified_at}
+          validUntilLabel={validUntilLabel}
+        />
         <div className="container py-8">{children}</div>
       </main>
     </div>
