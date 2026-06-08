@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProfileForm } from './profile-form';
+import { AccountDangerZone } from './account-danger-zone';
 
 export const metadata = { title: 'Mein Profil' };
 
@@ -118,6 +119,9 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* DSGVO: Datenauskunft + Konto löschen */}
+      <AccountDangerZone />
     </div>
   );
 }

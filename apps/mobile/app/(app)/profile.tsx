@@ -1,6 +1,11 @@
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '@/lib/auth-context';
+
+const WEB_URL =
+  (Constants.expoConfig?.extra?.webApiUrl as string | undefined) ??
+  'https://mieterplus.abdullahu.de';
 
 export default function ProfileScreen() {
   const { profile, session, signOut } = useAuth();
@@ -26,6 +31,15 @@ export default function ProfileScreen() {
       >
         <Ionicons name="log-out-outline" size={20} color="#ef4444" />
         <Text className="font-medium text-red-600">Abmelden</Text>
+      </Pressable>
+
+      {/* DSGVO / Google Play: in-App-Pfad zur Konto-Löschung */}
+      <Pressable
+        onPress={() => Linking.openURL(`${WEB_URL}/konto-loeschen`)}
+        className="mx-4 mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-white p-4 active:bg-gray-100"
+      >
+        <Ionicons name="trash-outline" size={18} color="#6b7280" />
+        <Text className="font-medium text-gray-600">Konto & Daten löschen</Text>
       </Pressable>
 
       <View className="mt-auto p-6">

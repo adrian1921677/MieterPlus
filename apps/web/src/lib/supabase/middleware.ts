@@ -46,8 +46,15 @@ export async function updateSession(request: NextRequest) {
     isAuthRoute ||
     path.startsWith('/reset-password') ||
     path.startsWith('/_next') ||
-    path.startsWith('/api/health') ||
-    path.startsWith('/auth/');
+    // API-Routen erzwingen ihre Auth selbst (Guards/Bearer/Webhook-Signatur).
+    // Würde die Middleware hier umleiten, kämen statt JSON-401 HTML-Redirects
+    // zurück — und Bearer-Token-Aufrufe der Mobile-App (ohne Cookie) brächen.
+    path.startsWith('/api/') ||
+    path.startsWith('/auth/') ||
+    // Rechtlich frei zugängliche Seiten (auch ohne Login erreichbar)
+    path === '/impressum' ||
+    path === '/datenschutz' ||
+    path === '/konto-loeschen';
 
   if (!user && !isPublic) {
     const loginUrl = new URL('/login', request.url);
