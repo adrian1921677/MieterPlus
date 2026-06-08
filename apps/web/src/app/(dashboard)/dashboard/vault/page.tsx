@@ -10,6 +10,7 @@ import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/s
 import { getSubscription } from '@/lib/subscription';
 import { getPropertyAccess, propertyIdsWithPermission } from '@/lib/access';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { VaultManager } from './vault-manager';
 
 export const metadata = { title: 'Dokumenten-Tresor' };
@@ -26,9 +27,13 @@ export default async function VaultPage() {
   const service = createSupabaseServiceClient();
   const access = await getPropertyAccess(service, user.id);
 
-  // Nur Vermieter (mit eigenen Objekten) oder Hausverwaltung (mit vault-Recht) bzw. Admin
+  // Vermieter & Admins dürfen die Seite immer öffnen (ohne Immobilie sehen sie
+  // unten einen Hinweis). Nur sonstige Rollen (z. B. Mieter) ohne Objekt-Zugriff
+  // werden umgeleitet — kein stummer Redirect mehr für Vermieter ohne Immobilie.
   const uploadableIds = propertyIdsWithPermission(access, 'vault');
-  if (profile?.role !== 'admin' && access.allIds.length === 0) redirect('/dashboard');
+  const mayAccessVault =
+    profile?.role === 'landlord' || profile?.role === 'admin' || access.allIds.length > 0;
+  if (!mayAccessVault) redirect('/dashboard');
 
   const sub = await getSubscription(supabase, user.id);
   const quota = PLAN_LIMITS[sub.plan].vaultDocs;
@@ -148,11 +153,16 @@ export default async function VaultPage() {
       {propertyOptions.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Keine Immobilie vorhanden</CardTitle>
+            <CardTitle>Noch keine Immobilie</CardTitle>
             <CardDescription>
-              Lege zuerst eine (verifizierte) Immobilie an, um Dokumente hochzuladen.
+              Lege zuerst eine Immobilie an, um Dokumente sicher mit deinen Mietern zu teilen.
             </CardDescription>
           </CardHeader>
+          <CardContent>
+            <Button asChild>
+              <Link href="/dashboard/properties/new">Immobilie hinzufügen</Link>
+            </Button>
+          </CardContent>
         </Card>
       ) : (
         <VaultManager
