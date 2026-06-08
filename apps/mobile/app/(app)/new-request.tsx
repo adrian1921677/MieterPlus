@@ -25,10 +25,10 @@ import {
   REQUEST_PRIORITY_LABELS_DE,
   STORAGE_BUCKETS,
   MAX_ATTACHMENTS_PER_REQUEST,
-  MAX_ATTACHMENT_SIZE_BYTES,
 } from '@mieterplus/shared';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
+import { compressImage } from '@/lib/compress-image';
 
 type LocalAttachment = {
   uri: string;
@@ -41,6 +41,7 @@ export default function NewRequestScreen() {
   const { tenancy, session } = useAuth();
   const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -65,23 +66,23 @@ export default function NewRequestScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 0.8,
+      quality: 1,
       selectionLimit: MAX_ATTACHMENTS_PER_REQUEST - attachments.length,
     });
     if (result.canceled) return;
-    const fresh: LocalAttachment[] = [];
-    for (const asset of result.assets) {
-      if (asset.fileSize && asset.fileSize > MAX_ATTACHMENT_SIZE_BYTES) {
-        Alert.alert('Zu groß', `${asset.fileName ?? 'Datei'} ist über 10 MB.`);
-        continue;
+    setProcessing(true);
+    try {
+      const fresh: LocalAttachment[] = [];
+      for (const asset of result.assets) {
+        // Vor dem Upload komprimieren (spart Storage, Daten & Zeit)
+        fresh.push(await compressImage(asset.uri, asset.width));
       }
-      fresh.push({
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
-      });
+      setAttachments((prev) => [...prev, ...fresh].slice(0, MAX_ATTACHMENTS_PER_REQUEST));
+    } catch {
+      Alert.alert('Fehler', 'Bild konnte nicht verarbeitet werden.');
+    } finally {
+      setProcessing(false);
     }
-    setAttachments((prev) => [...prev, ...fresh].slice(0, MAX_ATTACHMENTS_PER_REQUEST));
   };
 
   const takePhoto = async () => {
@@ -91,20 +92,19 @@ export default function NewRequestScreen() {
       Alert.alert('Berechtigung fehlt', 'Bitte erlaube Kamera-Zugriff in den Einstellungen.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    const result = await ImagePicker.launchCameraAsync({ quality: 1 });
     if (result.canceled) return;
     const asset = result.assets[0];
     if (!asset) return;
-    setAttachments((prev) =>
-      [
-        ...prev,
-        {
-          uri: asset.uri,
-          mimeType: asset.mimeType ?? 'image/jpeg',
-          fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
-        },
-      ].slice(0, MAX_ATTACHMENTS_PER_REQUEST),
-    );
+    setProcessing(true);
+    try {
+      const compressed = await compressImage(asset.uri, asset.width);
+      setAttachments((prev) => [...prev, compressed].slice(0, MAX_ATTACHMENTS_PER_REQUEST));
+    } catch {
+      Alert.alert('Fehler', 'Foto konnte nicht verarbeitet werden.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   const onSubmit = async (values: CreateRequestInput) => {
@@ -251,6 +251,7 @@ export default function NewRequestScreen() {
           <View>
             <Text className="mb-2 text-sm font-medium text-gray-700">
               Fotos ({attachments.length} / {MAX_ATTACHMENTS_PER_REQUEST})
+              {processing && <Text className="text-gray-400"> · wird verarbeitet…</Text>}
             </Text>
             <View className="flex-row flex-wrap gap-3">
               {attachments.map((a, idx) => (
@@ -268,13 +269,15 @@ export default function NewRequestScreen() {
                 <>
                   <Pressable
                     onPress={takePhoto}
-                    className="h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50"
+                    disabled={processing}
+                    className="h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 disabled:opacity-50"
                   >
                     <Ionicons name="camera-outline" size={28} color="#6b7280" />
                   </Pressable>
                   <Pressable
                     onPress={pickImages}
-                    className="h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50"
+                    disabled={processing}
+                    className="h-20 w-20 items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 disabled:opacity-50"
                   >
                     <Ionicons name="images-outline" size={28} color="#6b7280" />
                   </Pressable>

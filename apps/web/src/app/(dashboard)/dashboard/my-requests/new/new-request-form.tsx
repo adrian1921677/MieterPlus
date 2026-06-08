@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { compressImageFile } from '@/lib/compress-image';
 
 type TenancyOption = { id: string; label: string };
 
@@ -53,21 +54,25 @@ export function NewRequestForm({ tenancyOptions }: { tenancyOptions: TenancyOpti
     setValue('category', category, { shouldValidate: true });
   };
 
-  const addFiles = (incoming: FileList | null) => {
+  const addFiles = async (incoming: FileList | null) => {
     if (!incoming) return;
     setServerError(null);
     const next: LocalFile[] = [...files];
-    for (const file of Array.from(incoming)) {
+    for (const original of Array.from(incoming)) {
       if (next.length >= MAX_ATTACHMENTS_PER_REQUEST) {
         setServerError(`Maximal ${MAX_ATTACHMENTS_PER_REQUEST} Anhänge pro Mangelmeldung.`);
         break;
       }
-      if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
-        setServerError(`"${file.name}" ist größer als ${MAX_ATTACHMENT_SIZE_BYTES / 1024 / 1024} MB.`);
+      if (!(ALLOWED_ATTACHMENT_MIME_TYPES as readonly string[]).includes(original.type)) {
+        setServerError(`"${original.name}" hat ein nicht erlaubtes Format (${original.type}).`);
         continue;
       }
-      if (!(ALLOWED_ATTACHMENT_MIME_TYPES as readonly string[]).includes(file.type)) {
-        setServerError(`"${file.name}" hat ein nicht erlaubtes Format (${file.type}).`);
+      // Bilder vor dem Upload komprimieren (spart Storage & Bandbreite)
+      const file = original.type.startsWith('image/')
+        ? await compressImageFile(original)
+        : original;
+      if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+        setServerError(`"${file.name}" ist größer als ${MAX_ATTACHMENT_SIZE_BYTES / 1024 / 1024} MB.`);
         continue;
       }
       const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
