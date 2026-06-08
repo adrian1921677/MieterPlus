@@ -37,6 +37,15 @@ export default function AppLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="support"
+          options={{
+            title: 'Hilfe',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
+            ),
+          }}
+        />
         <Tabs.Screen name="requests" options={{ href: null }} />
         <Tabs.Screen name="new-request" options={{ href: null }} />
         <Tabs.Screen name="request" options={{ href: null }} />
@@ -75,6 +84,15 @@ export default function AppLayout() {
           title: 'Profil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="support"
+        options={{
+          title: 'Hilfe',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
           ),
         }}
       />

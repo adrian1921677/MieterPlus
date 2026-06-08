@@ -12,6 +12,7 @@ import {
   FileSignature,
   FolderLock,
   CalendarClock,
+  LifeBuoy,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -51,6 +52,7 @@ export const NAV_ICONS = {
   FileSignature,
   FolderLock,
   CalendarClock,
+  LifeBuoy,
 } satisfies Record<string, LucideIcon>;
 
 /** Aktiv-Erkennung: exakte Übersicht oder Unterpfad des Eintrags. */
@@ -78,7 +80,10 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { href: '/dashboard/appointments', label: 'Terminplaner', iconName: 'CalendarClock', roles: ['landlord', 'admin'], premium: true, managerVisible: true },
   // ── Vermieter — Profil ──────────────────────────────────
   { href: '/dashboard/profile', label: 'Mein Profil', iconName: 'UserCircle', roles: ['landlord'] },
+  // ── Hilfe (Mieter & Vermieter) ──────────────────────────
+  { href: '/dashboard/support', label: 'Hilfe & Support', iconName: 'LifeBuoy', roles: ['tenant', 'landlord'] },
   // ── Admin ───────────────────────────────────────────────
+  { href: '/dashboard/admin/support', label: 'Support-Postfach', iconName: 'LifeBuoy', roles: ['admin'] },
   { href: '/dashboard/admin/users', label: 'Alle User', iconName: 'Users', roles: ['admin'] },
   { href: '/dashboard/admin/verifications', label: 'Immobilien-Prüfung', iconName: 'ShieldCheck', roles: ['admin'] },
   { href: '/dashboard/admin/identity-verifications', label: 'Identitäts-Prüfung', iconName: 'UserCheck', roles: ['admin'] },
