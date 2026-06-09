@@ -10,10 +10,10 @@ import { Spinner } from '@/components/loading';
 
 const FEATURES: Record<SubscriptionPlan, string[]> = {
   free: [
-    '1 Immobilie · bis 3 Wohneinheiten',
+    '1 Immobilie · bis 2 Wohneinheiten',
     'Mängelmanagement mit Foto',
     'Mieter per Code einladen',
-    '3 Dokumente im Tresor',
+    '5 Dokumente im Tresor',
   ],
   plus: [
     'Bis 10 Immobilien · 30 Einheiten',
@@ -33,7 +33,7 @@ const FEATURES: Record<SubscriptionPlan, string[]> = {
 };
 
 export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan }) {
-  const [interval, setInterval] = useState<'month' | 'year'>('month');
+  const [interval, setInterval] = useState<'month' | 'year'>('year');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
@@ -59,11 +59,18 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
     }
   };
 
-  const priceFor = (plan: 'plus' | 'pro') =>
-    interval === 'month'
-      ? `${PLAN_PRICES[plan].monthly.toFixed(2).replace('.', ',')} €`
-      : `${PLAN_PRICES[plan].yearly} €`;
-  const suffix = interval === 'month' ? '/ Monat' : '/ Jahr';
+  const fmt = (n: number) => n.toFixed(2).replace('.', ',');
+  // Immer der Monatspreis als Anker; bei Jahresabo der heruntergerechnete Monatspreis
+  const priceBlock = (plan: 'plus' | 'pro') => {
+    if (interval === 'month') {
+      return { main: `${fmt(PLAN_PRICES[plan].monthly)} €`, sub: 'monatlich · jederzeit kündbar' };
+    }
+    const perMonth = PLAN_PRICES[plan].yearly / 12;
+    return {
+      main: `${fmt(perMonth)} €`,
+      sub: `${PLAN_PRICES[plan].yearly} € jährlich abgerechnet`,
+    };
+  };
 
   return (
     <div className="space-y-6">
@@ -101,9 +108,12 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-3xl font-black">
-              0 €<span className="text-sm font-normal text-muted-foreground"> / Monat</span>
-            </p>
+            <div className="mb-4">
+              <p className="text-3xl font-black">
+                0 €<span className="text-sm font-normal text-muted-foreground"> / Monat</span>
+              </p>
+              <p className="text-xs text-muted-foreground">dauerhaft kostenlos</p>
+            </div>
             <ul className="space-y-2 text-sm">
               {FEATURES.free.map((f) => (
                 <li key={f} className="flex items-start gap-2">
@@ -129,10 +139,13 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-3xl font-black">
-              {priceFor('plus')}
-              <span className="text-sm font-normal text-muted-foreground"> {suffix}</span>
-            </p>
+            <div className="mb-4">
+              <p className="text-3xl font-black">
+                {priceBlock('plus').main}
+                <span className="text-sm font-normal text-muted-foreground"> / Monat</span>
+              </p>
+              <p className="text-xs text-muted-foreground">{priceBlock('plus').sub}</p>
+            </div>
             <ul className="mb-6 space-y-2 text-sm">
               {FEATURES.plus.map((f) => (
                 <li key={f} className="flex items-start gap-2">
@@ -161,10 +174,13 @@ export function UpgradePlans({ currentPlan }: { currentPlan: SubscriptionPlan })
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="mb-4 text-3xl font-black">
-              {priceFor('pro')}
-              <span className="text-sm font-normal text-muted-foreground"> {suffix}</span>
-            </p>
+            <div className="mb-4">
+              <p className="text-3xl font-black">
+                {priceBlock('pro').main}
+                <span className="text-sm font-normal text-muted-foreground"> / Monat</span>
+              </p>
+              <p className="text-xs text-muted-foreground">{priceBlock('pro').sub}</p>
+            </div>
             <ul className="mb-6 space-y-2 text-sm">
               {FEATURES.pro.map((f) => (
                 <li key={f} className="flex items-start gap-2">

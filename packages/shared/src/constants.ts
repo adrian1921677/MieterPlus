@@ -23,8 +23,8 @@ export function isPaidPlan(plan: SubscriptionPlan): boolean {
 
 // Preise (Brutto inkl. MwSt), Stripe rechnet ab
 export const PLAN_PRICES: Record<'plus' | 'pro', { monthly: number; yearly: number }> = {
-  plus: { monthly: 9.9, yearly: 99 },
-  pro: { monthly: 24.9, yearly: 249 },
+  plus: { monthly: 14.9, yearly: 149 },
+  pro: { monthly: 29.9, yearly: 299 },
 };
 
 // Limits & Feature-Zugang pro Stufe. null = unbegrenzt.
@@ -38,7 +38,7 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
-  free: { properties: 1, units: 3, vaultDocs: 3, managers: 0, handover: false, appointments: false },
+  free: { properties: 1, units: 2, vaultDocs: 5, managers: 0, handover: false, appointments: false },
   plus: { properties: 10, units: 30, vaultDocs: 50, managers: 1, handover: true, appointments: true },
   pro: { properties: null, units: null, vaultDocs: 100000, managers: null, handover: true, appointments: true },
 };
