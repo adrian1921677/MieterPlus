@@ -12,7 +12,7 @@ const STORAGE_KEY = 'mp_onboarding_v1';
 // Tour-Schritte je Rolle. el = CSS-Selektor (data-tour). Ohne el = zentriert.
 const STEPS: Record<Role, RawStep[]> = {
   tenant: [
-    { title: '👋 Willkommen bei Mieter +!', description: 'Ich bin Albo und zeige dir in 1 Minute, wie alles funktioniert. Los geht’s!' },
+    { title: '👋 Willkommen bei Mieter +!', description: 'Ich bin Mio und zeige dir in 1 Minute, wie alles funktioniert. Los geht’s!' },
     { el: '[data-tour="/dashboard"]', title: 'Deine Übersicht', description: 'Dein Startpunkt: Wohnungen, offene Mängel und Hinweise auf einen Blick.' },
     { el: '[data-tour="/dashboard/my-requests/new"]', title: 'Mangel melden', description: 'Etwas kaputt? Hier meldest du es in Sekunden – mit Foto direkt aus der App.' },
     { el: '[data-tour="/dashboard/my-requests"]', title: 'Meine Mängel', description: 'Verfolge den Status jeder Meldung live: offen, in Bearbeitung, behoben.' },
@@ -22,7 +22,7 @@ const STEPS: Record<Role, RawStep[]> = {
     { el: '[data-tour="/dashboard/profile"]', title: 'Dein Profil', description: 'Hier pflegst du deine Daten. Fertig – viel Erfolg! 🎉' },
   ],
   landlord: [
-    { title: '👋 Willkommen bei Mieter +!', description: 'Ich bin Albo und zeige dir kurz die wichtigsten Funktionen. Dauert nur 1 Minute.' },
+    { title: '👋 Willkommen bei Mieter +!', description: 'Ich bin Mio und zeige dir kurz die wichtigsten Funktionen. Dauert nur 1 Minute.' },
     { el: '[data-tour="/dashboard"]', title: 'Deine Übersicht', description: 'Kennzahlen, offene Mängel und nächste Schritte gebündelt.' },
     { el: '[data-tour="/dashboard/properties"]', title: 'Immobilien', description: 'Lege hier deine Immobilien & Wohnungen an und lade Mieter per Code ein.' },
     { el: '[data-tour="/dashboard/requests"]', title: 'Mängel', description: 'Alle Mängelmeldungen deiner Mieter – bearbeiten, kommentieren, abschließen.' },
@@ -115,7 +115,7 @@ export function OnboardingGuide({ role, userName }: { role: Role; userName?: str
             <X className="h-4 w-4" />
           </button>
           <p className="pr-4 text-sm font-semibold text-foreground">
-            Hi{userName ? ` ${userName.split(' ')[0]}` : ''}, ich bin Albo! 👋
+            Hi{userName ? ` ${userName.split(' ')[0]}` : ''}, ich bin Mio! 👋
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Soll ich dir Mieter + kurz zeigen? Dauert nur eine Minute.

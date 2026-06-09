@@ -153,7 +153,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="container py-8">{children}</div>
       </main>
 
-      {/* Onboarding-Maskottchen „Albo" — winkt unten rechts & bietet die Tour an */}
+      {/* Onboarding-Maskottchen „Mio" — winkt unten rechts & bietet die Tour an */}
       <OnboardingGuide role={profile.role} userName={profile.full_name} />
     </div>
   );

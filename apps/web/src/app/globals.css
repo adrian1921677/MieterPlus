@@ -208,7 +208,7 @@
 }
 
 /* ── Reduced Motion ───────────────────────────────────────── */
-/* ── Onboarding-Maskottchen (Albo) ───────────────────────── */
+/* ── Onboarding-Maskottchen (Mio) ────────────────────────── */
 @keyframes onboardingWave {
   0%, 60%, 100% { transform: rotate(0deg); }
   10% { transform: rotate(18deg); }
