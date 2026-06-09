@@ -208,12 +208,55 @@
 }
 
 /* ── Reduced Motion ───────────────────────────────────────── */
+/* ── Onboarding-Maskottchen (Albo) ───────────────────────── */
+@keyframes onboardingWave {
+  0%, 60%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(18deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(16deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+}
+.onboarding-wave {
+  display: inline-block;
+  transform-origin: 70% 80%;
+  animation: onboardingWave 2.6s ease-in-out infinite;
+}
+@keyframes onboardingBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.onboarding-bob { animation: onboardingBob 3s ease-in-out infinite; }
+
+/* driver.js-Tour im ADB-Markendesign */
+.driver-popover.mp-tour { border-radius: 12px; padding: 18px; }
+.driver-popover.mp-tour .driver-popover-title { font-size: 16px; font-weight: 800; color: #09090b; }
+.driver-popover.mp-tour .driver-popover-description { color: #52525b; }
+.driver-popover.mp-tour .driver-popover-progress-text { color: #a1a1aa; font-size: 11px; }
+.driver-popover.mp-tour .driver-popover-next-btn {
+  background: #2563a8;
+  color: #fff;
+  text-shadow: none;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  padding: 7px 14px;
+}
+.driver-popover.mp-tour .driver-popover-next-btn:hover { background: #1d4f8c; }
+.driver-popover.mp-tour .driver-popover-prev-btn {
+  text-shadow: none;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .marquee-track,
   .plus-pulse,
   .premium-card::after,
-  .premium-spark {
+  .premium-spark,
+  .onboarding-wave,
+  .onboarding-bob {
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;

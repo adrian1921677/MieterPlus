@@ -22,6 +22,7 @@ export function DashboardSidebarNav({ items, role, isPremium }: Props) {
           <Link
             key={item.href + item.label}
             href={item.href}
+            data-tour={item.href}
             aria-current={active ? 'page' : undefined}
             className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
               active

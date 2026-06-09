@@ -8,6 +8,7 @@ import { VerifiedBadge } from '@/components/ui/verified-badge';
 import { MieterPlusBrand } from '@/components/brand';
 import { DashboardSidebarNav } from '@/components/dashboard-sidebar-nav';
 import { DashboardMobileNav } from '@/components/dashboard-mobile-nav';
+import { OnboardingGuide } from '@/components/onboarding-guide';
 import { computeIsPremium } from '@/lib/subscription';
 import { DASHBOARD_NAV_ITEMS, type DashboardNavLink } from '@/lib/dashboard-nav';
 import { LogOut, Sparkles } from 'lucide-react';
@@ -121,6 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {profile.role === 'landlord' && (
             <Link
               href="/dashboard/upgrade"
+              data-tour="upgrade"
               className="premium-card mb-3 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold text-white shadow-card transition-transform hover:scale-[1.02]"
             >
               <span className="relative z-10 flex items-center gap-1.5">
@@ -150,6 +152,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         />
         <div className="container py-8">{children}</div>
       </main>
+
+      {/* Onboarding-Maskottchen „Albo" — winkt unten rechts & bietet die Tour an */}
+      <OnboardingGuide role={profile.role} userName={profile.full_name} />
     </div>
   );
 }
