@@ -1,0 +1,24 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="1024" height="1024" rx="220" fill="#1e3a5f"/>
+  <g transform="translate(0,0) scale(1)">
+    <!-- Haken (kleiner Schenkel links) -->
+    <path d="M 255 300
+             L 255 425
+             L 175 505
+             L 255 585
+             L 360 480"
+          fill="none" stroke="white" stroke-width="86" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+    <!-- Dachform: links unten → Spitze → rechts unten -->
+    <path d="M 165 585
+             L 480 290
+             L 660 440"
+          fill="none" stroke="white" stroke-width="92" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Schornstein/Haken links der Spitze -->
+    <path d="M 300 310
+             L 300 430"
+          fill="none" stroke="white" stroke-width="88" stroke-linecap="round"/>
+    <!-- Plus rechts unten -->
+    <path d="M 740 470 L 740 730 M 610 600 L 870 600"
+          fill="none" stroke="white" stroke-width="92" stroke-linecap="round"/>
+  </g>
+</svg>

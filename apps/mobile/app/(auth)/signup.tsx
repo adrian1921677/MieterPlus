@@ -5,26 +5,56 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { useForm, Controller } from 'react-hook-form';
+import { Link } from 'expo-router';
+import { useForm, Controller, type Control } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signUpSchema, type SignUpInput } from '@mieterplus/shared';
 import { supabase } from '@/lib/supabase';
+import { signInWithGoogle } from '@/lib/google-auth';
+import { Brand } from '@/components/ui/brand';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { GoogleButton } from '@/components/ui/google-button';
+import { RolePicker, type Role } from '@/components/role-picker';
 
 export default function SignupScreen() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleRole, setGoogleRole] = useState<Role>('tenant');
 
   const {
     control,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     defaultValues: { role: 'tenant' },
   });
+
+  const emailRole = watch('role') as Role;
+
+  const handleGoogle = async () => {
+    setServerError(null);
+    setGoogleLoading(true);
+    const result = await signInWithGoogle(googleRole);
+    setGoogleLoading(false);
+    if (!result.ok && result.reason !== 'cancelled') {
+      setServerError(result.message ?? 'Google-Anmeldung fehlgeschlagen');
+    }
+  };
 
   const onSubmit = async (values: SignUpInput) => {
     setServerError(null);
@@ -44,73 +74,128 @@ export default function SignupScreen() {
 
   if (confirmationSent) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-6">
-        <Text className="mb-4 text-center text-2xl font-bold">E-Mail bestätigen</Text>
-        <Text className="text-center text-gray-600">
-          Wir haben dir einen Bestätigungslink an deine E-Mail-Adresse geschickt. Bitte öffne
-          ihn, um dein Konto zu aktivieren.
-        </Text>
+      <View className="flex-1 bg-slate-50 px-4 pt-12">
+        <View className="mb-8 items-center">
+          <Brand variant="centered" />
+        </View>
+        <Card>
+          <CardHeader className="gap-2">
+            <CardTitle className="text-2xl">E-Mail bestätigen</CardTitle>
+            <CardDescription>
+              Wir haben dir einen Bestätigungslink geschickt. Bitte öffne ihn, um dein Konto zu
+              aktivieren — danach kannst du dich anmelden.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-white"
-    >
-      <ScrollView contentContainerClassName="flex-grow px-6 py-8">
-        <Text className="mb-6 text-2xl font-bold text-gray-900">Mieter-Konto erstellen</Text>
+    <View className="flex-1 bg-slate-50">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
+        <ScrollView contentContainerClassName="px-4 pt-16 pb-12">
+          <View className="mb-6 items-center">
+            <Brand variant="centered" />
+          </View>
 
-        <View className="space-y-4">
-          <Field
-            label="Vollständiger Name"
-            error={errors.full_name?.message}
-            control={control}
-            name="full_name"
-            autoComplete="name"
-          />
-          <Field
-            label="E-Mail"
-            error={errors.email?.message}
-            control={control}
-            name="email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-          />
-          <Field
-            label="Passwort"
-            error={errors.password?.message}
-            hint="Min. 10 Zeichen, mit Groß-/Kleinbuchstaben und Ziffer"
-            control={control}
-            name="password"
-            secureTextEntry
-            autoComplete="new-password"
-          />
+          <Card>
+            <CardHeader className="gap-2">
+              <CardTitle className="text-2xl">Konto erstellen</CardTitle>
+              <CardDescription>
+                Wähle deine Rolle und melde dich mit Google an — oder registriere dich
+                klassisch per E-Mail.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <View className="gap-5">
+                {/* Google-Section: Rolle + Google-Button */}
+                <View className="gap-3">
+                  <RolePicker value={googleRole} onChange={setGoogleRole} />
+                  <GoogleButton
+                    onPress={handleGoogle}
+                    loading={googleLoading}
+                    disabled={isSubmitting}
+                    label={
+                      googleRole === 'landlord'
+                        ? 'Als Vermieter mit Google'
+                        : 'Als Mieter mit Google'
+                    }
+                  />
+                </View>
 
-          {serverError && (
-            <View className="rounded-lg bg-red-50 p-3">
-              <Text className="text-sm text-red-700">{serverError}</Text>
-            </View>
-          )}
+                {/* Trenner */}
+                <View className="flex-row items-center gap-3">
+                  <View className="h-px flex-1 bg-border" />
+                  <Text className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                    oder per E-Mail
+                  </Text>
+                  <View className="h-px flex-1 bg-border" />
+                </View>
 
-          <Pressable
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            className="rounded-lg bg-primary py-4 active:bg-primary-dark disabled:opacity-50"
-          >
-            <Text className="text-center text-base font-semibold text-white">
-              {isSubmitting ? 'Wird erstellt…' : 'Konto erstellen'}
-            </Text>
-          </Pressable>
+                {/* Email-Form mit Rolle-Wiederwahl */}
+                <View className="gap-4">
+                  <RolePicker
+                    value={emailRole}
+                    onChange={(r) => setValue('role', r)}
+                  />
 
-          <Text className="text-center text-xs text-gray-500">
-            Vermieter-Konten werden über das Web-Dashboard angelegt.
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                  <Field
+                    label="Vollständiger Name"
+                    error={errors.full_name?.message}
+                    control={control}
+                    name="full_name"
+                    autoComplete="name"
+                    placeholder="Max Mustermann"
+                  />
+                  <Field
+                    label="E-Mail"
+                    error={errors.email?.message}
+                    control={control}
+                    name="email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    placeholder="du@beispiel.de"
+                  />
+                  <Field
+                    label="Passwort"
+                    error={errors.password?.message}
+                    hint="Min. 10 Zeichen, mit Groß-/Kleinbuchstaben und Ziffer"
+                    control={control}
+                    name="password"
+                    secureTextEntry
+                    autoComplete="new-password"
+                  />
+
+                  {serverError && (
+                    <View className="rounded-md bg-destructive/10 p-3">
+                      <Text className="text-sm text-destructive">{serverError}</Text>
+                    </View>
+                  )}
+
+                  <Button fullWidth loading={isSubmitting} onPress={handleSubmit(onSubmit)}>
+                    {isSubmitting ? 'Wird erstellt…' : 'Konto erstellen'}
+                  </Button>
+                </View>
+
+                <View className="flex-row justify-center">
+                  <Text className="text-sm text-muted-foreground">Schon ein Konto? </Text>
+                  <Link href="/(auth)/login" asChild>
+                    <Pressable>
+                      <Text className="text-sm font-medium text-primary">Anmelden</Text>
+                    </Pressable>
+                  </Link>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -125,27 +210,26 @@ function Field({
   label: string;
   error?: string;
   hint?: string;
-  // deno-lint-ignore no-explicit-any
-  control: any;
+  control: Control<SignUpInput>;
   name: 'full_name' | 'email' | 'password';
-} & React.ComponentProps<typeof TextInput>) {
+} & Omit<React.ComponentProps<typeof Input>, 'value' | 'onChangeText'>) {
   return (
-    <View>
-      <Text className="mb-2 text-sm font-medium text-gray-700">{label}</Text>
+    <View className="gap-2">
+      <Label>{label}</Label>
       <Controller
         control={control}
         name={name}
         render={({ field: { onChange, value } }) => (
-          <TextInput
-            className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-base"
-            value={value ?? ''}
+          <Input
+            value={(value as string) ?? ''}
             onChangeText={onChange}
+            hasError={!!error}
             {...inputProps}
           />
         )}
       />
-      {hint && <Text className="mt-1 text-xs text-gray-500">{hint}</Text>}
-      {error && <Text className="mt-1 text-sm text-red-600">{error}</Text>}
+      {hint && <Text className="text-xs text-muted-foreground">{hint}</Text>}
+      {error && <Text className="text-sm text-destructive">{error}</Text>}
     </View>
   );
 }

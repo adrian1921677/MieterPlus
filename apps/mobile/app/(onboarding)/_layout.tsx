@@ -4,13 +4,10 @@ export default function OnboardingLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#fff' },
-        headerTitleStyle: { fontWeight: '600' },
-        contentStyle: { backgroundColor: '#fff' },
+        headerShown: false,
+        gestureEnabled: false,
+        contentStyle: { backgroundColor: '#f8fafc' },
       }}
-    >
-      <Stack.Screen name="address" options={{ title: 'Deine Adresse' }} />
-      <Stack.Screen name="code" options={{ title: 'Einladungscode' }} />
-    </Stack>
+    />
   );
 }

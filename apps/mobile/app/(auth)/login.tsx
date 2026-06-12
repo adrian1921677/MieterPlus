@@ -5,22 +5,46 @@ import {
   Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInSchema, type SignInInput } from '@mieterplus/shared';
 import { supabase } from '@/lib/supabase';
+import { signInWithGoogle } from '@/lib/google-auth';
+import { Brand } from '@/components/ui/brand';
+import { GoogleButton } from '@/components/ui/google-button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const {
     control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignInInput>({ resolver: zodResolver(signInSchema) });
+
+  const handleGoogle = async () => {
+    setServerError(null);
+    setGoogleLoading(true);
+    const result = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (!result.ok && result.reason !== 'cancelled') {
+      setServerError(result.message ?? 'Google-Anmeldung fehlgeschlagen');
+    }
+  };
 
   const onSubmit = async (values: SignInInput) => {
     setServerError(null);
@@ -35,90 +59,115 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-white"
-    >
-      <ScrollView contentContainerClassName="flex-grow justify-center px-6 py-12">
-        <View className="mb-8 items-center">
-          <View className="mb-3 rounded bg-primary px-3 py-1">
-            <Text className="font-bold text-white">ADB</Text>
+    <View className="flex-1 bg-slate-50">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
+        <ScrollView contentContainerClassName="px-4 pt-16 pb-12">
+          <View className="mb-6 items-center">
+            <Brand variant="centered" />
           </View>
-          <Text className="text-3xl font-bold text-gray-900">Mieter +</Text>
-          <Text className="mt-2 text-gray-500">Willkommen zurück</Text>
-        </View>
 
-        <View className="space-y-4">
-          <View>
-            <Text className="mb-2 text-sm font-medium text-gray-700">E-Mail</Text>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-base"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                  value={value ?? ''}
-                  onChangeText={onChange}
-                  placeholder="du@beispiel.de"
+          <Card>
+            <CardHeader className="gap-2">
+              <CardTitle className="text-2xl">Willkommen zurück</CardTitle>
+              <CardDescription>
+                Melde dich mit Google oder mit deiner E-Mail an.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <View className="gap-5">
+                <GoogleButton
+                  onPress={handleGoogle}
+                  loading={googleLoading}
+                  disabled={isSubmitting}
                 />
-              )}
-            />
-            {errors.email && (
-              <Text className="mt-1 text-sm text-red-600">{errors.email.message}</Text>
-            )}
-          </View>
 
-          <View>
-            <Text className="mb-2 text-sm font-medium text-gray-700">Passwort</Text>
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-base"
-                  secureTextEntry
-                  autoComplete="current-password"
-                  textContentType="password"
-                  value={value ?? ''}
-                  onChangeText={onChange}
-                />
-              )}
-            />
-            {errors.password && (
-              <Text className="mt-1 text-sm text-red-600">{errors.password.message}</Text>
-            )}
-          </View>
+                <View className="flex-row items-center gap-3">
+                  <View className="h-px flex-1 bg-border" />
+                  <Text className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                    oder mit E-Mail
+                  </Text>
+                  <View className="h-px flex-1 bg-border" />
+                </View>
 
-          {serverError && (
-            <View className="rounded-lg bg-red-50 p-3">
-              <Text className="text-sm text-red-700">{serverError}</Text>
-            </View>
-          )}
+                <View className="gap-4">
+                  <View className="gap-2">
+                    <Label>E-Mail</Label>
+                    <Controller
+                      control={control}
+                      name="email"
+                      render={({ field: { onChange, value } }) => (
+                        <Input
+                          value={value ?? ''}
+                          onChangeText={onChange}
+                          keyboardType="email-address"
+                          autoCapitalize="none"
+                          autoComplete="email"
+                          textContentType="emailAddress"
+                          placeholder="du@beispiel.de"
+                          hasError={!!errors.email}
+                        />
+                      )}
+                    />
+                    {errors.email && (
+                      <Text className="text-sm text-destructive">{errors.email.message}</Text>
+                    )}
+                  </View>
 
-          <Pressable
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-            className="rounded-lg bg-primary py-4 active:bg-primary-dark disabled:opacity-50"
-          >
-            <Text className="text-center text-base font-semibold text-white">
-              {isSubmitting ? 'Anmelden…' : 'Anmelden'}
-            </Text>
-          </Pressable>
+                  <View className="gap-2">
+                    <View className="flex-row items-center justify-between">
+                      <Label>Passwort</Label>
+                      <Pressable onPress={() => router.push('/(auth)/forgot-password')}>
+                        <Text className="text-xs font-medium text-primary">
+                          Passwort vergessen?
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <Controller
+                      control={control}
+                      name="password"
+                      render={({ field: { onChange, value } }) => (
+                        <Input
+                          value={value ?? ''}
+                          onChangeText={onChange}
+                          secureTextEntry
+                          autoComplete="current-password"
+                          textContentType="password"
+                          hasError={!!errors.password}
+                        />
+                      )}
+                    />
+                    {errors.password && (
+                      <Text className="text-sm text-destructive">{errors.password.message}</Text>
+                    )}
+                  </View>
 
-          <Link href="/(auth)/signup" asChild>
-            <Pressable className="py-3">
-              <Text className="text-center text-sm text-gray-600">
-                Noch kein Konto?{' '}
-                <Text className="font-medium text-primary">Jetzt registrieren</Text>
-              </Text>
-            </Pressable>
-          </Link>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                  {serverError && (
+                    <View className="rounded-md bg-destructive/10 p-3">
+                      <Text className="text-sm text-destructive">{serverError}</Text>
+                    </View>
+                  )}
+
+                  <Button fullWidth loading={isSubmitting} onPress={handleSubmit(onSubmit)}>
+                    {isSubmitting ? 'Anmelden…' : 'Anmelden'}
+                  </Button>
+                </View>
+
+                <View className="flex-row justify-center">
+                  <Text className="text-sm text-muted-foreground">Noch kein Konto? </Text>
+                  <Link href="/(auth)/signup" asChild>
+                    <Pressable>
+                      <Text className="text-sm font-medium text-primary">Jetzt registrieren</Text>
+                    </Pressable>
+                  </Link>
+                </View>
+              </View>
+            </CardContent>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }

@@ -4,7 +4,7 @@ const config: ExpoConfig = {
   name: 'Mieter +',
   slug: 'mieterplus',
   owner: 'callmealbo',
-  version: '1.0.0',
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/icon.png',
   scheme: 'mieterplus',
@@ -13,7 +13,8 @@ const config: ExpoConfig = {
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#2563a8',
+    // Navy passend zum Logo-Hintergrund — Splash wirkt wie ein nahtloser Screen
+    backgroundColor: '#1e3a5f',
   },
   assetBundlePatterns: ['**/*'],
   ios: {
@@ -31,7 +32,7 @@ const config: ExpoConfig = {
     package: 'de.adb.mieterplus',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#2563a8',
+      backgroundColor: '#1e3a5f',
     },
     permissions: ['CAMERA', 'READ_MEDIA_IMAGES', 'NOTIFICATIONS'],
   },
@@ -45,8 +46,14 @@ const config: ExpoConfig = {
     [
       'expo-build-properties',
       {
-        // Compose-Compiler 1.5.15 (in expo-modules-core 2.2.x) verlangt Kotlin 1.9.25
-        android: { kotlinVersion: '1.9.25' },
+        android: {
+          // Compose-Compiler 1.5.15 (in expo-modules-core 2.2.x) verlangt Kotlin 1.9.25
+          kotlinVersion: '1.9.25',
+          // Play Store verlangt seit 08/2025 Mindest-Target API 35 (Android 15)
+          compileSdkVersion: 35,
+          targetSdkVersion: 35,
+          buildToolsVersion: '35.0.0',
+        },
       },
     ],
     [
@@ -71,6 +78,12 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: 'https://u.expo.dev/c7374b1a-770e-4e67-b605-ce1546da30db',
+    fallbackToCacheTimeout: 0,
+    checkAutomatically: 'ON_LOAD',
+  },
   experiments: {
     typedRoutes: true,
   },

@@ -47,15 +47,15 @@ export function MieterPlusBrand({
       } ${className}`}
     >
       <Image
-        src="/logo.jpg"
-        alt="ADB Dienstleistungen Logo"
+        src="/logo.png"
+        alt="Mieter Plus Logo"
         width={size * 2}
         height={size * 2}
         sizes={`${size}px`}
         quality={95}
         priority
         style={{ width: size, height: size }}
-        className="rounded-full object-contain"
+        className="rounded-2xl object-contain"
       />
       <span className={`leading-tight ${isStacked ? 'text-center' : ''}`}>
         <span className={`block ${titleClass} ${textColor}`}>

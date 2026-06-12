@@ -4,13 +4,9 @@ export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#fff' },
-        headerTitleStyle: { fontWeight: '600' },
-        contentStyle: { backgroundColor: '#fff' },
+        headerShown: false,
+        contentStyle: { backgroundColor: '#f8fafc' },
       }}
-    >
-      <Stack.Screen name="login" options={{ title: 'Anmelden' }} />
-      <Stack.Screen name="signup" options={{ title: 'Konto erstellen' }} />
-    </Stack>
+    />
   );
 }

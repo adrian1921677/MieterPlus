@@ -24,7 +24,7 @@ function ProtectedRoutes() {
       return;
     }
     if (session && profile?.role === 'tenant' && !tenancy && !inOnboarding) {
-      router.replace('/(onboarding)/address');
+      router.replace('/(onboarding)/code');
       return;
     }
     if (session && profile?.role === 'tenant' && tenancy && !inApp) {
