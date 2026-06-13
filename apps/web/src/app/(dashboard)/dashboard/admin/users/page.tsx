@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Users, Home, Wrench, ShieldCheck } from 'lucide-react';
+import { SUBSCRIPTION_PLANS, type SubscriptionPlan } from '@mieterplus/shared';
 import { createSupabaseServerClient, createSupabaseServiceClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
