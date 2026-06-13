@@ -1,177 +1,282 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Image,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { STORAGE_BUCKETS, type OwnershipDocumentType } from '@mieterplus/shared';
+import { supabase } from '@/lib/supabase';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+const DOC_LABELS: Record<OwnershipDocumentType, string> = {
+  land_register: 'Grundbuchauszug',
+  notary_deed: 'Notarurkunde',
+  purchase_contract: 'Kaufvertrag',
+  other: 'Sonstiges',
+};
+
+type Property = {
+  id: string;
+  street: string;
+  house_number: string;
+  postal_code: string;
+  city: string;
+  ownership_status: string;
+  rejection_reason: string | null;
+  owner_id: string;
+  owner_name: string;
+};
+
+type Doc = {
+  id: string;
+  file_path: string;
+  document_type: OwnershipDocumentType;
+  signedUrl?: string;
+  isImage: boolean;
+};
 
 export default function PropertyReviewScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-
-  const [property, setProperty] = useState<any>(null);
-  const [docUrl, setDocUrl] = useState<string | null>(null);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [property, setProperty] = useState<Property | null>(null);
+  const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reviewing, setReviewing] = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const { data: propRes, error } = await supabase
-          .from("properties")
-          .select("id, name, address, city, zip_code, ownership_doc_path, created_at, landlord:profiles!properties_landlord_id_fkey(full_name, email)")
-          .eq("id", id)
-          .single();
-
-        if (error) throw error;
-        setProperty(propRes);
-
-        if (propRes.ownership_doc_path) {
-          const { data } = await supabase.storage
-            .from("ownership-docs")
-            .createSignedUrl(propRes.ownership_doc_path, 300);
-          setDocUrl(data?.signedUrl || null);
-        }
-      } catch (err) {
-        console.error("Fetch property error:", err);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    if (!id) return;
+    const { data: p } = await supabase
+      .from('properties')
+      .select(
+        'id, street, house_number, postal_code, city, ownership_status, rejection_reason, owner_id, profiles:owner_id(full_name)',
+      )
+      .eq('id', id)
+      .single();
+    if (p) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pp: any = p;
+      setProperty({
+        id: pp.id,
+        street: pp.street,
+        house_number: pp.house_number,
+        postal_code: pp.postal_code,
+        city: pp.city,
+        ownership_status: pp.ownership_status,
+        rejection_reason: pp.rejection_reason,
+        owner_id: pp.owner_id,
+        owner_name: pp.profiles?.full_name ?? 'Unbekannt',
+      });
     }
-    fetchData();
+
+    const { data: d } = await supabase
+      .from('ownership_documents')
+      .select('id, file_path, document_type')
+      .eq('property_id', id)
+      .order('created_at');
+
+    const items: Doc[] = await Promise.all(
+      (d ?? []).map(async (doc) => {
+        const { data: signed } = await supabase.storage
+          .from(STORAGE_BUCKETS.ownershipDocuments)
+          .createSignedUrl(doc.file_path, 600);
+        return {
+          id: doc.id,
+          file_path: doc.file_path,
+          document_type: doc.document_type as OwnershipDocumentType,
+          signedUrl: signed?.signedUrl,
+          isImage: !doc.file_path.toLowerCase().endsWith('.pdf'),
+        };
+      }),
+    );
+    setDocs(items);
+    setLoading(false);
   }, [id]);
 
-  async function handleReview(approved: boolean) {
-    setReviewing(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const res = await fetch(
-        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/review-property`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session?.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            property_id: id,
-            approved,
-          }),
-        }
-      );
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json.error || "Unbekannter Fehler");
-      }
-
-      Alert.alert(
-        "Erfolg",
-        `Das Objekt wurde ${approved ? "freigegeben" : "abgelehnt"}.`,
-        [{ text: "OK", onPress: () => router.back() }]
-      );
-    } catch (err: any) {
-      Alert.alert("Fehler", err.message);
-    } finally {
-      setReviewing(false);
+  const decide = async (decision: 'verified' | 'rejected') => {
+    if (!property) return;
+    if (decision === 'rejected' && reason.trim().length < 5) {
+      Alert.alert('Begründung erforderlich', 'Bitte gib eine kurze Begründung (min. 5 Zeichen).');
+      return;
     }
-  }
+    setSubmitting(true);
+    const { error } = await supabase.rpc('admin_review_property', {
+      p_property_id: property.id,
+      p_decision: decision,
+      p_reason: decision === 'rejected' ? reason.trim() : null,
+    });
+    setSubmitting(false);
+    if (error) {
+      Alert.alert('Fehler', error.message);
+      return;
+    }
+    Alert.alert(
+      decision === 'verified' ? 'Freigegeben' : 'Abgelehnt',
+      `Immobilie ${property.street} ${property.house_number} wurde ${
+        decision === 'verified' ? 'freigegeben' : 'abgelehnt'
+      }.`,
+    );
+    router.back();
+  };
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#2563EB" />
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#2563eb" />
       </View>
     );
   }
-
   if (!property) {
     return (
-      <View className="flex-1 justify-center items-center bg-white px-6">
-        <Text className="text-gray-500">Objekt nicht gefunden.</Text>
+      <View className="flex-1 items-center justify-center bg-slate-50 p-6">
+        <Text className="text-foreground">Immobilie nicht gefunden.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingBottom: 40 }}>
-      <View className="px-4 pt-16 pb-4 border-b border-gray-100 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-4">
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">
-          Objekt-Prüfung
+    <ScrollView className="flex-1 bg-slate-50" contentContainerClassName="p-4 gap-4 pb-12">
+      <Pressable onPress={() => router.back()} className="flex-row items-center gap-2">
+        <Ionicons name="chevron-back" size={18} color="#2563eb" />
+        <Text className="text-sm font-medium text-primary">Zurück</Text>
+      </Pressable>
+
+      <View>
+        <Text className="text-2xl font-bold text-foreground">
+          {property.street} {property.house_number}
+        </Text>
+        <Text className="text-sm text-muted-foreground">
+          {property.postal_code} {property.city}
         </Text>
       </View>
 
-      <View className="p-4 space-y-6">
-        <View className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <Text className="text-lg font-semibold text-gray-900 mb-1">{property.name}</Text>
-          <Text className="text-gray-600 mb-2">
-            {property.address}, {property.zip_code} {property.city}
-          </Text>
-          <View className="h-px bg-gray-200 my-2" />
-          <Text className="text-sm font-medium text-gray-800">Vermieter:</Text>
-          <Text className="text-gray-600">{property.landlord?.full_name}</Text>
-          <Text className="text-gray-500 text-sm">{property.landlord?.email}</Text>
-        </View>
+      <Card>
+        <CardHeader className="gap-1">
+          <CardTitle className="text-base">Antragsteller</CardTitle>
+          <CardDescription>{property.owner_name}</CardDescription>
+        </CardHeader>
+      </Card>
 
-        <View>
-          <Text className="text-base font-semibold text-gray-900 mb-3">Eigentumsnachweis</Text>
-          {docUrl ? (
-            <Image
-              source={{ uri: docUrl }}
-              className="w-full h-64 rounded-xl bg-gray-100"
-              resizeMode="contain"
-            />
+      <Card>
+        <CardHeader className="gap-1">
+          <CardTitle className="text-base">Eigentumsnachweise</CardTitle>
+          <CardDescription>
+            {docs.length} Dokument(e) · tippe für Großansicht
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {docs.length === 0 ? (
+            <Text className="text-sm text-muted-foreground">
+              Keine Dokumente hochgeladen — Ablehnung empfohlen.
+            </Text>
           ) : (
-            <View className="bg-gray-50 rounded-xl p-8 items-center border border-gray-200">
-              <Ionicons name="document-outline" size={48} color="#94A3B8" />
-              <Text className="text-gray-500 mt-2 text-center">
-                Kein Dokument hochgeladen.
-              </Text>
+            <View className="gap-3">
+              {docs.map((d) => (
+                <Pressable
+                  key={d.id}
+                  onPress={() => d.signedUrl && Linking.openURL(d.signedUrl)}
+                  className="overflow-hidden rounded-md border border-border bg-card"
+                >
+                  {d.isImage && d.signedUrl ? (
+                    <Image
+                      source={{ uri: d.signedUrl }}
+                      style={{ width: '100%', height: 220 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="flex-row items-center gap-3 p-4">
+                      <Ionicons name="document-text-outline" size={24} color="#64748b" />
+                      <Text className="flex-1 text-sm">PDF öffnen</Text>
+                      <Ionicons name="open-outline" size={16} color="#2563eb" />
+                    </View>
+                  )}
+                  <View className="p-3">
+                    <Text className="text-xs font-medium text-foreground">
+                      {DOC_LABELS[d.document_type]}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
             </View>
           )}
-        </View>
+        </CardContent>
+      </Card>
 
-        <View className="flex-row gap-3 pt-4">
-          <TouchableOpacity
-            onPress={() => handleReview(true)}
-            disabled={reviewing}
-            className={`flex-1 rounded-xl py-4 items-center ${
-              reviewing ? "bg-green-300" : "bg-green-500"
-            }`}
+      {!showReject ? (
+        <View className="gap-2">
+          <Button
+            fullWidth
+            loading={submitting}
+            onPress={() =>
+              Alert.alert('Freigeben?', 'Die Immobilie wird als verifiziert markiert.', [
+                { text: 'Abbrechen', style: 'cancel' },
+                { text: 'Freigeben', onPress: () => decide('verified') },
+              ])
+            }
           >
-            {reviewing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-semibold">Freigeben</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleReview(false)}
-            disabled={reviewing}
-            className={`flex-1 rounded-xl py-4 items-center ${
-              reviewing ? "bg-red-300" : "bg-red-50"
-            } border border-red-200`}
-          >
-            {reviewing ? (
-              <ActivityIndicator color="#EF4444" />
-            ) : (
-              <Text className="text-red-600 font-semibold">Ablehnen</Text>
-            )}
-          </TouchableOpacity>
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="checkmark-circle-outline" size={18} color="white" />
+              <Text className="text-base font-semibold text-primary-foreground">Freigeben</Text>
+            </View>
+          </Button>
+          <Button fullWidth variant="outline" onPress={() => setShowReject(true)}>
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="close-circle-outline" size={18} color="#ef4444" />
+              <Text className="text-sm font-medium text-destructive">Ablehnen</Text>
+            </View>
+          </Button>
         </View>
-      </View>
+      ) : (
+        <Card>
+          <CardHeader className="gap-1">
+            <CardTitle className="text-base">Ablehnungsgrund</CardTitle>
+            <CardDescription>
+              Wird dem Vermieter angezeigt. Sei sachlich und konkret.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="gap-3">
+            <TextInput
+              value={reason}
+              onChangeText={setReason}
+              multiline
+              placeholder="z. B. „Grundbuchauszug nicht aktuell — bitte aktuelle Version (max. 3 Monate alt) hochladen."
+              className="min-h-[120px] rounded-md border border-input bg-background p-3 text-sm text-foreground"
+            />
+            <View className="flex-row gap-2">
+              <Button
+                variant="destructive"
+                onPress={() => decide('rejected')}
+                loading={submitting}
+              >
+                Endgültig ablehnen
+              </Button>
+              <Button variant="outline" onPress={() => setShowReject(false)}>
+                Abbrechen
+              </Button>
+            </View>
+          </CardContent>
+        </Card>
+      )}
     </ScrollView>
   );
 }

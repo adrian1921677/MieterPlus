@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -58,6 +59,32 @@ export default function RequestDetailScreen() {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [decisionBusy, setDecisionBusy] = useState(false);
+
+  const confirmResolved = async (action: 'confirm' | 'reject') => {
+    if (!id) return;
+    setDecisionBusy(true);
+    const { error } = await supabase.rpc('tenant_confirm_resolved', {
+      p_request_id: id,
+      p_action: action,
+      p_rating: null,
+      p_feedback: null,
+    });
+    setDecisionBusy(false);
+    if (error) {
+      Alert.alert('Fehler', error.message);
+      return;
+    }
+    Alert.alert(
+      action === 'confirm' ? 'Behoben bestätigt' : 'Wieder geöffnet',
+      action === 'confirm'
+        ? 'Vielen Dank — der Mangel wurde geschlossen.'
+        : 'Der Mangel wurde zurück an deinen Vermieter geleitet.',
+    );
+    setRequest((prev) =>
+      prev ? { ...prev, status: action === 'confirm' ? 'closed' : 'in_progress' } : prev,
+    );
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -211,6 +238,35 @@ export default function RequestDetailScreen() {
               </View>
               <Text className="text-lg font-semibold">{request.title}</Text>
               <Text className="mt-2 text-gray-700">{request.description}</Text>
+
+              {request.status === 'resolved' && (
+                <View className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 gap-2">
+                  <Text className="text-sm font-semibold text-emerald-900">
+                    Dein Vermieter hat den Mangel als behoben markiert.
+                  </Text>
+                  <Text className="text-xs text-emerald-800">
+                    Ist alles in Ordnung? Bestätige bitte oder öffne den Mangel wieder.
+                  </Text>
+                  <View className="mt-1 flex-row gap-2">
+                    <Pressable
+                      onPress={() => confirmResolved('confirm')}
+                      disabled={decisionBusy}
+                      className="flex-1 flex-row items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-2.5"
+                    >
+                      <Ionicons name="checkmark-circle" size={16} color="white" />
+                      <Text className="text-sm font-semibold text-white">Behoben</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => confirmResolved('reject')}
+                      disabled={decisionBusy}
+                      className="flex-1 flex-row items-center justify-center gap-1.5 rounded-md border border-emerald-600 py-2.5"
+                    >
+                      <Ionicons name="refresh-outline" size={16} color="#047857" />
+                      <Text className="text-sm font-semibold text-emerald-800">Doch nicht</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
 
             {attachments.length > 0 && (

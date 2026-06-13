@@ -1,11 +1,21 @@
 import { useCallback, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
+} from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { SUBSCRIPTION_PLANS, SUBSCRIPTION_PLAN_LABELS_DE } from '@mieterplus/shared';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { VerifiedBadge } from '@/components/ui/verified-badge';
 
 type UserRow = {
@@ -59,6 +69,26 @@ export default function AdminUsersScreen() {
     u.full_name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  const [editing, setEditing] = useState<UserRow | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const setPlan = async (plan: string) => {
+    if (!editing) return;
+    setSaving(true);
+    const { error } = await supabase.rpc('admin_set_subscription', {
+      p_user_id: editing.id,
+      p_plan: plan,
+      p_months: 12,
+    });
+    setSaving(false);
+    if (error) {
+      Alert.alert('Fehler', error.message);
+      return;
+    }
+    setEditing(null);
+    await load();
+  };
+
   return (
     <View className="flex-1 bg-slate-50">
       <FlatList
@@ -100,6 +130,7 @@ export default function AdminUsersScreen() {
           )
         }
         renderItem={({ item }) => (
+          <Pressable onPress={() => item.role !== 'admin' && setEditing(item)}>
           <Card>
             <CardContent className="flex-row items-center gap-3 p-4">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -130,8 +161,14 @@ export default function AdminUsersScreen() {
                         ? 'Vermieter'
                         : 'Mieter'}
                   </Badge>
-                  {item.subscription_plan && item.subscription_plan !== 'free' && (
-                    <Badge variant="warning">{item.subscription_plan}</Badge>
+                  {item.subscription_plan && item.role === 'landlord' && (
+                    <Badge
+                      variant={item.subscription_plan === 'trial' ? 'warning' : 'info'}
+                    >
+                      {SUBSCRIPTION_PLAN_LABELS_DE[
+                        item.subscription_plan as keyof typeof SUBSCRIPTION_PLAN_LABELS_DE
+                      ] ?? item.subscription_plan}
+                    </Badge>
                   )}
                 </View>
               </View>
@@ -140,8 +177,46 @@ export default function AdminUsersScreen() {
               </Text>
             </CardContent>
           </Card>
+          </Pressable>
         )}
       />
+
+      <Modal
+        visible={!!editing}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditing(null)}
+      >
+        <Pressable onPress={() => setEditing(null)} className="flex-1 bg-black/40">
+          <Pressable onPress={(e) => e.stopPropagation()} className="mt-auto">
+            <View className="rounded-t-2xl bg-white p-5 pb-10">
+              <View className="mb-3 self-center h-1 w-12 rounded-full bg-muted" />
+              <Text className="mb-1 text-xl font-bold text-foreground">
+                Tarif setzen
+              </Text>
+              <Text className="mb-4 text-sm text-muted-foreground">
+                {editing?.full_name} · {editing?.role}
+              </Text>
+              <View className="gap-2">
+                {SUBSCRIPTION_PLANS.map((p) => (
+                  <Button
+                    key={p}
+                    fullWidth
+                    variant={editing?.subscription_plan === p ? 'default' : 'outline'}
+                    loading={saving}
+                    onPress={() => setPlan(p)}
+                  >
+                    {SUBSCRIPTION_PLAN_LABELS_DE[p]}
+                  </Button>
+                ))}
+                <Button fullWidth variant="ghost" onPress={() => setEditing(null)}>
+                  Abbrechen
+                </Button>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

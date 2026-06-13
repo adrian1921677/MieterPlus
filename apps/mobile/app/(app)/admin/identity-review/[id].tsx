@@ -1,161 +1,249 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Image,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "@/lib/supabase";
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import * as Linking from 'expo-linking';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+const BUCKET = 'identity-documents';
+
+type Doc = {
+  id: string;
+  document_side: 'front' | 'back';
+  file_path: string;
+  signedUrl?: string;
+};
+
+type Target = {
+  id: string;
+  full_name: string;
+  role: string;
+  identity_verified_at: string | null;
+};
 
 export default function IdentityReviewScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-
-  const [identity, setIdentity] = useState<any>(null);
-  const [docUrl, setDocUrl] = useState<string | null>(null);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [target, setTarget] = useState<Target | null>(null);
+  const [docs, setDocs] = useState<Doc[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reviewing, setReviewing] = useState(false);
+  const [showReject, setShowReject] = useState(false);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const { data: identRes, error } = await supabase
-          .from("identity_documents")
-          .select("id, document_path, user_id, profiles!inner(id, full_name, email, role)")
-          .eq("id", id)
-          .single();
+  const load = useCallback(async () => {
+    if (!id) return;
+    const { data: p } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, identity_verified_at')
+      .eq('id', id)
+      .single();
+    setTarget(p as Target | null);
 
-        if (error) throw error;
-        setIdentity(identRes);
-
-        if (identRes.document_path) {
-          const { data } = await supabase.storage
-            .from("identity-docs")
-            .createSignedUrl(identRes.document_path, 300);
-          setDocUrl(data?.signedUrl || null);
-        }
-      } catch (err) {
-        console.error("Fetch identity error:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
+    const { data: d } = await supabase
+      .from('identity_documents')
+      .select('id, document_side, file_path')
+      .eq('user_id', id);
+    const items: Doc[] = await Promise.all(
+      (d ?? []).map(async (doc) => {
+        const { data: signed } = await supabase.storage
+          .from(BUCKET)
+          .createSignedUrl(doc.file_path, 600);
+        return {
+          id: doc.id,
+          document_side: doc.document_side as 'front' | 'back',
+          file_path: doc.file_path,
+          signedUrl: signed?.signedUrl,
+        };
+      }),
+    );
+    setDocs(items.sort((a, b) => (a.document_side === 'front' ? -1 : 1)));
+    setLoading(false);
   }, [id]);
 
-  async function handleReview(approved: boolean) {
-    setReviewing(true);
-    try {
-      const newStatus = approved ? "approved" : "rejected";
-      
-      const { error: updateDocError } = await supabase
-        .from("identity_documents")
-        .update({ status: newStatus })
-        .eq("id", id);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-      if (updateDocError) throw updateDocError;
-
-      Alert.alert(
-        "Erfolg",
-        `Die Identität wurde ${approved ? "bestätigt" : "abgelehnt"}.`,
-        [{ text: "OK", onPress: () => router.back() }]
-      );
-    } catch (err: any) {
-      Alert.alert("Fehler", err.message);
-    } finally {
-      setReviewing(false);
+  const decide = async (decision: 'verified' | 'rejected') => {
+    if (!target) return;
+    if (decision === 'rejected' && reason.trim().length < 5) {
+      Alert.alert('Begründung erforderlich', 'Bitte gib eine kurze Begründung (min. 5 Zeichen).');
+      return;
     }
-  }
+    setSubmitting(true);
+    const { error } = await supabase.rpc('admin_review_identity', {
+      p_user_id: target.id,
+      p_decision: decision,
+      p_reason: decision === 'rejected' ? reason.trim() : null,
+    });
+    setSubmitting(false);
+    if (error) {
+      Alert.alert('Fehler', error.message);
+      return;
+    }
+    Alert.alert(
+      decision === 'verified' ? 'Identität bestätigt' : 'Identität abgelehnt',
+      `${target.full_name} wurde ${decision === 'verified' ? 'verifiziert' : 'abgelehnt'}.`,
+    );
+    router.back();
+  };
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#2563EB" />
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#2563eb" />
       </View>
     );
   }
-
-  if (!identity) {
+  if (!target) {
     return (
-      <View className="flex-1 justify-center items-center bg-white px-6">
-        <Text className="text-gray-500">Prüfung nicht gefunden.</Text>
+      <View className="flex-1 items-center justify-center bg-slate-50 p-6">
+        <Text className="text-foreground">User nicht gefunden.</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingBottom: 40 }}>
-      <View className="px-4 pt-16 pb-4 border-b border-gray-100 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-4">
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">
-          Identitäts-Prüfung
-        </Text>
-      </View>
+    <ScrollView className="flex-1 bg-slate-50" contentContainerClassName="p-4 gap-4 pb-12">
+      <Pressable onPress={() => router.back()} className="flex-row items-center gap-2">
+        <Ionicons name="chevron-back" size={18} color="#2563eb" />
+        <Text className="text-sm font-medium text-primary">Zurück</Text>
+      </Pressable>
 
-      <View className="p-4 space-y-6">
-        <View className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-          <Text className="text-sm font-medium text-gray-800">Nutzer:</Text>
-          <Text className="text-lg font-semibold text-gray-900 mb-1">{identity.profiles?.full_name}</Text>
-          <Text className="text-gray-500 text-sm mb-2">{identity.profiles?.email}</Text>
-          <View className="h-px bg-gray-200 my-2" />
-          <Text className="text-sm text-gray-600">Rolle: {identity.profiles?.role}</Text>
-        </View>
+      <Card>
+        <CardHeader className="gap-1">
+          <CardTitle>{target.full_name}</CardTitle>
+          <CardDescription>
+            Rolle: {target.role === 'landlord' ? 'Vermieter' : target.role} ·{' '}
+            {target.identity_verified_at ? 'bereits verifiziert' : 'wartet auf Prüfung'}
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
-        <View>
-          <Text className="text-base font-semibold text-gray-900 mb-3">Ausweisdokument</Text>
-          {docUrl ? (
-            <Image
-              source={{ uri: docUrl }}
-              className="w-full h-64 rounded-xl bg-gray-100"
-              resizeMode="contain"
-            />
+      <Card>
+        <CardHeader className="gap-1">
+          <CardTitle className="text-base">Personalausweis</CardTitle>
+          <CardDescription>
+            Prüfe, ob der Name auf dem Ausweis mit dem Profil-Namen übereinstimmt und die
+            Dokumente lesbar &amp; aktuell sind.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {docs.length === 0 ? (
+            <Text className="text-sm text-muted-foreground">
+              Keine Dokumente hochgeladen — Ablehnung empfohlen.
+            </Text>
           ) : (
-            <View className="bg-gray-50 rounded-xl p-8 items-center border border-gray-200">
-              <Ionicons name="document-outline" size={48} color="#94A3B8" />
-              <Text className="text-gray-500 mt-2 text-center">
-                Kein Dokument hochgeladen.
-              </Text>
+            <View className="gap-3">
+              {docs.map((d) => (
+                <Pressable
+                  key={d.id}
+                  onPress={() => d.signedUrl && Linking.openURL(d.signedUrl)}
+                  className="overflow-hidden rounded-md border border-border bg-card"
+                >
+                  {d.signedUrl ? (
+                    <Image
+                      source={{ uri: d.signedUrl }}
+                      style={{ width: '100%', height: 240 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View className="h-40 items-center justify-center bg-muted">
+                      <ActivityIndicator color="#64748b" />
+                    </View>
+                  )}
+                  <View className="flex-row items-center justify-between p-3">
+                    <Text className="text-xs font-medium uppercase tracking-wider text-foreground">
+                      {d.document_side === 'front' ? 'Vorderseite' : 'Rückseite'}
+                    </Text>
+                    <Ionicons name="expand-outline" size={14} color="#64748b" />
+                  </View>
+                </Pressable>
+              ))}
             </View>
           )}
-        </View>
+        </CardContent>
+      </Card>
 
-        <View className="flex-row gap-3 pt-4">
-          <TouchableOpacity
-            onPress={() => handleReview(true)}
-            disabled={reviewing}
-            className={`flex-1 rounded-xl py-4 items-center ${
-              reviewing ? "bg-green-300" : "bg-green-500"
-            }`}
+      {!showReject ? (
+        <View className="gap-2">
+          <Button
+            fullWidth
+            loading={submitting}
+            onPress={() =>
+              Alert.alert(
+                'Identität bestätigen?',
+                `${target.full_name} wird als verifiziert markiert.`,
+                [
+                  { text: 'Abbrechen', style: 'cancel' },
+                  { text: 'Bestätigen', onPress: () => decide('verified') },
+                ],
+              )
+            }
           >
-            {reviewing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white font-semibold">Bestätigen</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => handleReview(false)}
-            disabled={reviewing}
-            className={`flex-1 rounded-xl py-4 items-center ${
-              reviewing ? "bg-red-300" : "bg-red-50"
-            } border border-red-200`}
-          >
-            {reviewing ? (
-              <ActivityIndicator color="#EF4444" />
-            ) : (
-              <Text className="text-red-600 font-semibold">Ablehnen</Text>
-            )}
-          </TouchableOpacity>
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="finger-print-outline" size={18} color="white" />
+              <Text className="text-base font-semibold text-primary-foreground">
+                Identität bestätigen
+              </Text>
+            </View>
+          </Button>
+          <Button fullWidth variant="outline" onPress={() => setShowReject(true)}>
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="close-circle-outline" size={18} color="#ef4444" />
+              <Text className="text-sm font-medium text-destructive">Ablehnen</Text>
+            </View>
+          </Button>
         </View>
-      </View>
+      ) : (
+        <Card>
+          <CardHeader className="gap-1">
+            <CardTitle className="text-base">Ablehnungsgrund</CardTitle>
+            <CardDescription>
+              Wird dem Vermieter angezeigt — bitte konkret und sachlich.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="gap-3">
+            <TextInput
+              value={reason}
+              onChangeText={setReason}
+              multiline
+              placeholder="z. B. „Personalausweis abgelaufen — bitte aktuellen Ausweis nutzen."
+              className="min-h-[120px] rounded-md border border-input bg-background p-3 text-sm text-foreground"
+            />
+            <View className="flex-row gap-2">
+              <Button
+                variant="destructive"
+                onPress={() => decide('rejected')}
+                loading={submitting}
+              >
+                Endgültig ablehnen
+              </Button>
+              <Button variant="outline" onPress={() => setShowReject(false)}>
+                Abbrechen
+              </Button>
+            </View>
+          </CardContent>
+        </Card>
+      )}
     </ScrollView>
   );
 }
