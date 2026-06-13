@@ -56,7 +56,9 @@ export async function POST(request: NextRequest) {
     const plan: SubscriptionPlan =
       planValid && (ownerProfile?.subscription_plan === 'plus' || ownerProfile?.subscription_plan === 'pro')
         ? ownerProfile.subscription_plan
-        : 'free';
+        : planValid && (ownerProfile?.subscription_plan === 'trial' || ownerProfile?.subscription_plan === 'payg')
+          ? ownerProfile.subscription_plan
+          : 'trial';
     const limit = PLAN_LIMITS[plan].managers; // null = unbegrenzt
     if (limit !== null) {
       const { count } = await service

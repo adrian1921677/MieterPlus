@@ -150,9 +150,9 @@ export default async function AdminUsersPage({
                         <SubscriptionToggle
                           userId={p.id}
                           initialPlan={
-                            p.subscription_plan === 'plus' || p.subscription_plan === 'pro'
-                              ? p.subscription_plan
-                              : 'free'
+                            (SUBSCRIPTION_PLANS as readonly string[]).includes(p.subscription_plan ?? '')
+                              ? (p.subscription_plan as SubscriptionPlan)
+                              : 'trial'
                           }
                           validUntil={p.subscription_valid_until ?? null}
                         />
