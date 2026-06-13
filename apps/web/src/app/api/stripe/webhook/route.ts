@@ -46,9 +46,10 @@ export async function POST(request: NextRequest) {
   // Helper: Plan-Status setzen anhand Stripe-Customer-ID
   async function applyPlan(
     customerId: string,
-    plan: 'free' | 'plus' | 'pro',
+    plan: 'trial' | 'plus' | 'pro' | 'payg',
     validUntil: string | null,
     subscriptionId: string | null,
+    extra?: { paygModulesJson?: string; paygPriceCents?: number },
   ) {
     const { data: profile } = await service
       .from('profiles')
@@ -57,15 +58,27 @@ export async function POST(request: NextRequest) {
       .single();
     if (!profile) return;
 
-    await service
-      .from('profiles')
-      .update({
-        subscription_plan: plan,
-        subscription_valid_until: validUntil,
-        stripe_subscription_id: subscriptionId,
-        subscription_auto_renew: plan !== 'free',
-      })
-      .eq('id', profile.id);
+    const update: Record<string, unknown> = {
+      subscription_plan: plan,
+      subscription_valid_until: validUntil,
+      stripe_subscription_id: subscriptionId,
+      subscription_auto_renew: plan === 'plus' || plan === 'pro' || plan === 'payg',
+    };
+    if (plan === 'payg') {
+      if (extra?.paygModulesJson) {
+        try {
+          update.payg_modules = JSON.parse(extra.paygModulesJson);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (extra?.paygPriceCents) update.payg_price_cents = extra.paygPriceCents;
+    } else {
+      update.payg_modules = null;
+      update.payg_price_cents = null;
+    }
+
+    await service.from('profiles').update(update).eq('id', profile.id);
 
     await service.from('subscription_events').insert({
       user_id: profile.id,
@@ -84,15 +97,25 @@ export async function POST(request: NextRequest) {
       const validUntil = sub.items?.data?.[0]?.current_period_end
         ? new Date(sub.items.data[0].current_period_end * 1000).toISOString()
         : null;
-      // Plan aus der Subscription-Metadata (beim Checkout gesetzt)
       const metaPlan = sub.metadata?.plan;
-      const plan = metaPlan === 'pro' ? 'pro' : metaPlan === 'plus' ? 'plus' : 'plus';
-      await applyPlan(String(sub.customer), active ? plan : 'free', validUntil, sub.id);
+      const plan: 'plus' | 'pro' | 'payg' =
+        metaPlan === 'pro' ? 'pro' : metaPlan === 'payg' ? 'payg' : 'plus';
+      const paygModulesJson = sub.metadata?.payg_modules;
+      const unitAmount = sub.items?.data?.[0]?.price?.unit_amount;
+      // Trial-Periode behalten, sonst Stripe-Status: active=Plan, sonst zurück auf 'trial'
+      await applyPlan(
+        String(sub.customer),
+        active ? plan : 'trial',
+        validUntil,
+        sub.id,
+        { paygModulesJson, paygPriceCents: typeof unitAmount === 'number' ? unitAmount : undefined },
+      );
       break;
     }
     case 'customer.subscription.deleted': {
       const sub = event.data.object as import('stripe').Stripe.Subscription;
-      await applyPlan(String(sub.customer), 'free', null, null);
+      // Nach Kündigung zurück in 'trial' (mit Ende = jetzt + 0 d ⇒ inaktiv)
+      await applyPlan(String(sub.customer), 'trial', null, null);
       break;
     }
     default:

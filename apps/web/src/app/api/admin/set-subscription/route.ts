@@ -20,9 +20,9 @@ export async function POST(request: NextRequest) {
   if (typeof userId !== 'string' || !/^[0-9a-f-]{36}$/i.test(userId)) {
     return NextResponse.json({ error: { message: 'user_id (uuid) erforderlich' } }, { status: 400 });
   }
-  if (plan !== 'free' && plan !== 'plus' && plan !== 'pro') {
+  if (plan !== 'trial' && plan !== 'plus' && plan !== 'pro' && plan !== 'payg') {
     return NextResponse.json(
-      { error: { message: "plan muss 'free', 'plus' oder 'pro' sein" } },
+      { error: { message: "plan muss 'trial', 'plus', 'pro' oder 'payg' sein" } },
       { status: 400 },
     );
   }
@@ -40,10 +40,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: { message: 'User nicht gefunden' } }, { status: 404 });
   }
 
-  const validUntil =
-    plan === 'free'
-      ? null
-      : new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
+  const validUntil = new Date(Date.now() + months * 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const { error: updErr } = await service
     .from('profiles')
@@ -69,7 +66,7 @@ export async function POST(request: NextRequest) {
 
   await service
     .rpc('log_audit', {
-      p_action: plan === 'free' ? 'subscription.revoked' : 'subscription.granted',
+      p_action: plan === 'trial' ? 'subscription.trial' : 'subscription.granted',
       p_entity_type: 'profile',
       p_entity_id: userId,
       p_payload: { plan, valid_until: validUntil, by: guard.user.id },

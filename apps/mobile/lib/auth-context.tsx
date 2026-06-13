@@ -6,7 +6,7 @@ type Profile = {
   id: string;
   role: 'tenant' | 'landlord' | 'admin';
   full_name: string;
-  subscription_plan?: string;
+  subscription_plan?: 'trial' | 'plus' | 'pro' | 'payg' | null;
   subscription_valid_until?: string | null;
 };
 

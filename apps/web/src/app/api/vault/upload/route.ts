@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
         error: {
           code: 'quota_exceeded',
           message:
-            ownerPlan === 'free'
-              ? `Das Free-Kontingent von ${quota} Dokumenten ist erreicht. Mit Plus sind ${PLAN_LIMITS.plus.vaultDocs} möglich.`
+            ownerPlan === 'trial'
+              ? `Dein Test-Kontingent von ${quota} Dokumenten ist erreicht. Mit Plus sind ${PLAN_LIMITS.plus.vaultDocs} möglich.`
               : `Das Dokumenten-Kontingent (${quota}) ist erreicht.`,
         },
       },

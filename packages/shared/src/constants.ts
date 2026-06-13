@@ -5,26 +5,35 @@ export const ROLES = ['tenant', 'landlord', 'admin'] as const;
 export type Role = (typeof ROLES)[number];
 
 // =============================================================================
-// Abo-Modell — 3 Stufen: free / plus / pro
+// Abo-Modell — Trial (14 Tage) / Plus / Pro / Pay-as-you-go
+// Free wurde abgeschafft; jeder neue Vermieter bekommt automatisch 14d Trial.
 // =============================================================================
-export const SUBSCRIPTION_PLANS = ['free', 'plus', 'pro'] as const;
+export const SUBSCRIPTION_PLANS = ['trial', 'plus', 'pro', 'payg'] as const;
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
 
 export const SUBSCRIPTION_PLAN_LABELS_DE: Record<SubscriptionPlan, string> = {
-  free: 'Free',
+  trial: 'Testversion',
   plus: 'Plus',
   pro: 'Pro',
+  payg: 'Pay-as-you-go',
 };
 
-/** Bezahlte Pläne (= "Premium"-Zugang). */
+/** Bezahlte Pläne (= "Premium"-Zugang). Trial gilt auch als premium. */
 export function isPaidPlan(plan: SubscriptionPlan): boolean {
-  return plan === 'plus' || plan === 'pro';
+  return plan === 'plus' || plan === 'pro' || plan === 'payg';
 }
 
-// Preise (Brutto inkl. MwSt), Stripe rechnet ab
-export const PLAN_PRICES: Record<'plus' | 'pro', { monthly: number; yearly: number }> = {
-  plus: { monthly: 14.9, yearly: 149 },
-  pro: { monthly: 29.9, yearly: 299 },
+/** Plan zählt als aktiver Premium-Zugang (Trial inklusive). */
+export function isActiveAccessPlan(plan: SubscriptionPlan): boolean {
+  return plan === 'trial' || isPaidPlan(plan);
+}
+
+export const TRIAL_DURATION_DAYS = 14;
+
+// Preise (Brutto inkl. MwSt), Stripe rechnet ab. Nur Monatspreise — kein Jahresrabatt mehr.
+export const PLAN_PRICES: Record<'plus' | 'pro', { monthly: number }> = {
+  plus: { monthly: 29.99 },
+  pro: { monthly: 49.99 },
 };
 
 // Limits & Feature-Zugang pro Stufe. null = unbegrenzt.
@@ -35,23 +44,91 @@ export type PlanLimits = {
   managers: number | null;
   handover: boolean;
   appointments: boolean;
+  statistics: boolean;
 };
 
 export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
-  free: { properties: 1, units: 2, vaultDocs: 5, managers: 0, handover: false, appointments: false },
-  plus: { properties: 10, units: 30, vaultDocs: 50, managers: 1, handover: true, appointments: true },
-  pro: { properties: null, units: null, vaultDocs: 100000, managers: null, handover: true, appointments: true },
+  // Trial = vollwertiger Plus-Zugang
+  trial: { properties: 3, units: 30, vaultDocs: 25, managers: 0, handover: false, appointments: true, statistics: true },
+  plus:  { properties: 3, units: 30, vaultDocs: 25, managers: 0, handover: false, appointments: true, statistics: true },
+  pro:   { properties: 10, units: 100, vaultDocs: 100, managers: 1, handover: true, appointments: true, statistics: true },
+  // PayG: Limits werden zur Laufzeit aus payg_modules berechnet — hier nur Defaults.
+  payg:  { properties: 1, units: 10, vaultDocs: 0, managers: 0, handover: false, appointments: false, statistics: false },
 };
 
 // Feature-Keys für Gating (zentral)
-export const PREMIUM_FEATURES = ['handover', 'appointments'] as const;
+export const PREMIUM_FEATURES = ['handover', 'appointments', 'statistics'] as const;
 export type PremiumFeature = (typeof PREMIUM_FEATURES)[number];
 
 // Dokumenten-Tresor Kontingent pro Plan (Convenience aus PLAN_LIMITS)
 export const VAULT_QUOTA: Record<SubscriptionPlan, number> = {
-  free: PLAN_LIMITS.free.vaultDocs,
+  trial: PLAN_LIMITS.trial.vaultDocs,
   plus: PLAN_LIMITS.plus.vaultDocs,
   pro: PLAN_LIMITS.pro.vaultDocs,
+  payg: PLAN_LIMITS.payg.vaultDocs,
+};
+
+// =============================================================================
+// Pay-as-you-go: Bausteine (Preise in Cents, monatlich)
+// =============================================================================
+export type PaygModules = {
+  /** Anzahl zusätzlicher Immobilien (über die enthaltene 1 hinaus). */
+  extraProperties: number;
+  /** Anzahl 10er-Pakete Einheiten (über die enthaltenen 10 hinaus). */
+  unitsBundles: number;
+  /** Anzahl 25er-Pakete Vault-Dokumente. */
+  vaultBundles: number;
+  /** Übergabeprotokoll-Modul gebucht? */
+  handover: boolean;
+  /** Terminplaner mit Push-Benachrichtigung gebucht? */
+  appointmentsPremium: boolean;
+  /** Anzahl eingeladener Hausverwalter. */
+  managers: number;
+};
+
+export const PAYG_BASE_PRICE_CENTS = 999; // Grund-Abo (1 Immobilie, 10 Einheiten)
+export const PAYG_PRICES_CENTS = {
+  extraProperty: 400, // pro zusätzliche Immobilie
+  unitsBundle: 300, // pro 10er-Paket Einheiten
+  vaultBundle: 300, // pro 25er-Paket Vault-Dokumente
+  handover: 700, // Übergabeprotokoll-Modul
+  appointmentsPremium: 500, // Terminplaner mit Push
+  manager: 500, // pro Hausverwalter
+} as const;
+
+/** Berechnet den monatlichen Pay-as-you-go-Preis in Cents. */
+export function calcPaygPriceCents(m: PaygModules): number {
+  return (
+    PAYG_BASE_PRICE_CENTS +
+    Math.max(0, m.extraProperties) * PAYG_PRICES_CENTS.extraProperty +
+    Math.max(0, m.unitsBundles) * PAYG_PRICES_CENTS.unitsBundle +
+    Math.max(0, m.vaultBundles) * PAYG_PRICES_CENTS.vaultBundle +
+    (m.handover ? PAYG_PRICES_CENTS.handover : 0) +
+    (m.appointmentsPremium ? PAYG_PRICES_CENTS.appointmentsPremium : 0) +
+    Math.max(0, m.managers) * PAYG_PRICES_CENTS.manager
+  );
+}
+
+/** Ermittelt die effektiven Limits für einen PayG-Account. */
+export function paygLimits(m: PaygModules): PlanLimits {
+  return {
+    properties: 1 + Math.max(0, m.extraProperties),
+    units: 10 + Math.max(0, m.unitsBundles) * 10,
+    vaultDocs: Math.max(0, m.vaultBundles) * 25,
+    managers: Math.max(0, m.managers),
+    handover: m.handover,
+    appointments: m.appointmentsPremium,
+    statistics: true,
+  };
+}
+
+export const PAYG_DEFAULT_MODULES: PaygModules = {
+  extraProperties: 0,
+  unitsBundles: 0,
+  vaultBundles: 1,
+  handover: false,
+  appointmentsPremium: false,
+  managers: 0,
 };
 
 export const VAULT_DOCUMENT_TYPES = [

@@ -22,9 +22,9 @@ export async function POST() {
     .eq('id', guard.user.id)
     .single();
 
-  if (!profile || profile.subscription_plan === 'free') {
+  if (!profile || profile.subscription_plan === 'trial') {
     return NextResponse.json(
-      { error: { message: 'Es ist kein bezahltes Abo aktiv.' } },
+      { error: { message: 'Es ist kein bezahltes Abo aktiv (du bist im Trial).' } },
       { status: 409 },
     );
   }

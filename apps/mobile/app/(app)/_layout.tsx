@@ -29,6 +29,36 @@ const tabScreenOptions = {
   header: () => <AppHeader />,
 };
 
+// Routen, die nie als Tab erscheinen (Detail-/Stack-Routen)
+const HIDDEN_ROUTES = [
+  'landlord-info',
+  'request/[id]',
+  'property/[id]',
+  'new-property',
+  'verify-identity',
+  'support',
+  'profile',
+  'join',
+  'tenants',
+  'handover/index',
+  'vault/index',
+  'vault/new',
+  'vault/[id]',
+  'appointments/index',
+  'appointments/new',
+  'appointments/[id]',
+  'managers/index',
+  'managers/new',
+  'managers/[id]',
+  'admin/users',
+  'admin/support-inbox',
+  'admin/support-thread/[userId]',
+  'admin/property-verifications',
+  'admin/identity-verifications',
+  'admin/property-review/[id]',
+  'admin/identity-review/[id]',
+];
+
 export default function AppLayout() {
   const { session, profile } = useAuth();
 
@@ -37,6 +67,10 @@ export default function AppLayout() {
   }, [session?.user?.id]);
 
   const isLandlordOrAdmin = profile?.role === 'landlord' || profile?.role === 'admin';
+
+  const hidden = HIDDEN_ROUTES.map((name) => (
+    <Tabs.Screen key={name} name={name} options={{ href: null }} />
+  ));
 
   if (isLandlordOrAdmin) {
     return (
@@ -69,49 +103,33 @@ export default function AppLayout() {
           }}
         />
         <Tabs.Screen
-          name="profile"
+          name="more"
           options={{
-            title: 'Profil',
+            title: 'Mehr',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person-outline" color={color} size={size} />
+              <Ionicons name="grid-outline" color={color} size={size} />
             ),
           }}
         />
-        {/* Hidden routes */}
+        {/* Mieter-Routen verstecken */}
         <Tabs.Screen name="requests" options={{ href: null }} />
         <Tabs.Screen name="new-request" options={{ href: null }} />
-        <Tabs.Screen name="request/[id]" options={{ href: null }} />
-        <Tabs.Screen name="landlord-info" options={{ href: null }} />
-        <Tabs.Screen name="support" options={{ href: null, title: 'Hilfe' }} />
-        <Tabs.Screen name="property/[id]" options={{ href: null }} />
-        <Tabs.Screen name="new-property" options={{ href: null }} />
-        <Tabs.Screen name="verify-identity" options={{ href: null }} />
-        <Tabs.Screen name="admin/property-verifications" options={{ href: null }} />
-        <Tabs.Screen name="admin/identity-verifications" options={{ href: null }} />
-        <Tabs.Screen name="admin/property-review/[id]" options={{ href: null }} />
-        <Tabs.Screen name="admin/identity-review/[id]" options={{ href: null }} />
-        <Tabs.Screen name="vault/index" options={{ href: null, title: 'Tresor' }} />
-        <Tabs.Screen name="vault/new" options={{ href: null, title: 'Neues Dokument' }} />
-        <Tabs.Screen name="vault/[id]" options={{ href: null, title: 'Dokument' }} />
-        <Tabs.Screen name="appointments/index" options={{ href: null, title: 'Termine' }} />
-        <Tabs.Screen name="appointments/new" options={{ href: null, title: 'Neuer Termin' }} />
-        <Tabs.Screen name="appointments/[id]" options={{ href: null, title: 'Termin' }} />
-        <Tabs.Screen name="managers/index" options={{ href: null, title: 'Hausverwaltung' }} />
-        <Tabs.Screen name="managers/new" options={{ href: null, title: 'Verwalter einladen' }} />
-        <Tabs.Screen name="managers/[id]" options={{ href: null, title: 'Verwalter' }} />
+        <Tabs.Screen name="my-documents" options={{ href: null }} />
+        <Tabs.Screen name="my-appointments" options={{ href: null }} />
+        {hidden}
       </Tabs>
     );
   }
 
-  // Tenant tabs
+  // ── Mieter-Tabs ──────────────────────────────────────────
   return (
     <Tabs screenOptions={tabScreenOptions}>
       <Tabs.Screen
         name="requests"
         options={{
-          title: 'Mängel',
+          title: 'Übersicht',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="construct-outline" color={color} size={size} />
+            <Ionicons name="home-outline" color={color} size={size} />
           ),
         }}
       />
@@ -125,36 +143,37 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="my-documents"
         options={{
-          title: 'Profil',
+          title: 'Dokumente',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+            <Ionicons name="folder-open-outline" color={color} size={size} />
           ),
         }}
       />
       <Tabs.Screen
-        name="support"
+        name="my-appointments"
         options={{
-          title: 'Hilfe',
+          title: 'Termine',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />
+            <Ionicons name="calendar-outline" color={color} size={size} />
           ),
         }}
       />
-      {/* Hidden */}
+      <Tabs.Screen
+        name="more"
+        options={{
+          title: 'Mehr',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="grid-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      {/* Vermieter-Routen verstecken */}
       <Tabs.Screen name="overview" options={{ href: null }} />
       <Tabs.Screen name="properties" options={{ href: null }} />
       <Tabs.Screen name="landlord-requests" options={{ href: null }} />
-      <Tabs.Screen name="landlord-info" options={{ href: null }} />
-      <Tabs.Screen name="request/[id]" options={{ href: null }} />
-      <Tabs.Screen name="property/[id]" options={{ href: null }} />
-      <Tabs.Screen name="new-property" options={{ href: null }} />
-      <Tabs.Screen name="verify-identity" options={{ href: null }} />
-      <Tabs.Screen name="admin/property-verifications" options={{ href: null }} />
-      <Tabs.Screen name="admin/identity-verifications" options={{ href: null }} />
-      <Tabs.Screen name="admin/property-review/[id]" options={{ href: null }} />
-      <Tabs.Screen name="admin/identity-review/[id]" options={{ href: null }} />
+      {hidden}
     </Tabs>
   );
 }

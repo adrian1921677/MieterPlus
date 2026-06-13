@@ -45,7 +45,7 @@ export function SubscriptionToggle({
       onChange={(e) => change(e.target.value as SubscriptionPlan)}
       title="Abo-Plan setzen"
       className={`rounded-md border px-2 py-1 text-xs font-semibold ${
-        plan === 'free' ? 'border-zinc-200 text-zinc-600' : 'border-[#2563a8] bg-[#eff6ff] text-[#2563a8]'
+        plan === 'trial' ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-[#2563a8] bg-[#eff6ff] text-[#2563a8]'
       }`}
     >
       {SUBSCRIPTION_PLANS.map((p) => (

@@ -151,10 +151,10 @@ export default function ProfileScreen() {
                 </View>
                 <View className="flex-1">
                   <Text className="font-medium text-amber-900">
-                    {profile.subscription_plan === 'pro' || profile.subscription_plan === 'premium' ? 'Tarif verwalten' : 'Auf Premium upgraden'}
+                    {profile.subscription_plan === 'pro' || profile.subscription_plan === 'plus' ? 'Tarif verwalten' : 'Auf Premium upgraden'}
                   </Text>
                   <Text className="text-xs text-amber-700/80">
-                    Aktueller Tarif: <Text className="font-semibold uppercase">{profile.subscription_plan || 'free'}</Text>
+                    Aktueller Tarif: <Text className="font-semibold uppercase">{profile.subscription_plan || 'trial'}</Text>
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color="#b45309" />

@@ -127,7 +127,13 @@ export default async function VaultPage() {
                 {usedCount} / {quota} Dokumenten belegt
               </span>
               <span className="text-xs text-muted-foreground">
-                {sub.plan === 'free' ? 'Free-Kontingent' : sub.plan === 'plus' ? 'Plus-Kontingent' : 'Pro-Kontingent'}
+                {sub.plan === 'trial'
+                  ? 'Testversion'
+                  : sub.plan === 'plus'
+                    ? 'Plus-Kontingent'
+                    : sub.plan === 'pro'
+                      ? 'Pro-Kontingent'
+                      : 'Pay-as-you-go'}
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
